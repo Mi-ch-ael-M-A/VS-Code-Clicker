@@ -159,8 +159,8 @@ input[type=range]{vertical-align:middle;width:140px;height:12px;accent-color:var
 #status .remote{background:var(--accent);color:#fff;padding:0 10px;margin-right:4px}
 #status .sp{flex:1}
 /* notifications */
-#notifs{position:fixed;right:12px;bottom:32px;width:440px;display:flex;flex-direction:column;gap:8px;z-index:150}
-.notif{background:var(--notif);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.45);padding:10px 12px 10px;position:relative;overflow:hidden;animation:nin .18s ease-out}
+#notifs{position:fixed;left:calc(50% + 160px);transform:translateX(-50%);bottom:34px;width:480px;max-width:92vw;display:flex;flex-direction:column;gap:8px;z-index:150}
+.notif{background:var(--notif);border:1px solid var(--accent);border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.45);padding:10px 12px 10px;position:relative;overflow:hidden;animation:nin .18s ease-out}
 @keyframes nin{from{transform:translateY(12px);opacity:0}}
 .nh{display:flex;gap:10px;align-items:flex-start}
 .ni{font-size:15px;line-height:18px;flex:none;width:18px;text-align:center}
@@ -176,6 +176,7 @@ input[type=range]{vertical-align:middle;width:140px;height:12px;accent-color:var
 .nt i{display:block;height:100%;background:var(--accent);width:100%}
 .notif.urgent .nt i{background:#e5a00d}
 /* palette */
+.al{display:inline-block}
 #palette{position:fixed;top:44px;left:50%;transform:translateX(-50%);width:600px;max-width:90vw;background:var(--notif);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.5);z-index:300;display:none;padding:6px}
 #palette input{width:100%;background:var(--input);border:1px solid var(--accent);color:var(--fg);font:13px system-ui;padding:5px 8px;outline:none;border-radius:2px}
 #plist{max-height:340px;overflow:auto;margin-top:4px}
@@ -572,7 +573,7 @@ function taxBill(){const qr=S.taxes.quarterRev;S.taxes.capex.shift();S.taxes.cap
   const b={id:++S.taxes.n,amt,orig:amt,age:0};S.taxes.bills.push(b);
   log(`🧾 Steuerbescheid #${b.id}: ${money(amt)} (Umsatz ${money(qr)}, Abschreibung ${money(dep)})`,'warn');
   if(S.ext.cpa&&S.cash>=amt){payBill(b.id);return;}
-  if(!R.boss)notify({icon:'🧾',title:'Finanzamt:',msg:`Steuerbescheid #${b.id} über <b>${money(amt)}</b>. Unbezahlt: 1 % Zinsen pro Tag.`,buttons:[{label:'Bezahlen',pri:1,fn:()=>{if(S.cash<b.amt){toast('⊗','Nicht genug Cash.');return false;}payBill(b.id);}},{label:'Später'}]});
+  if(!R.boss)notify({icon:'🧾',title:'Finanzamt:',msg:`Steuerbescheid #${b.id} über <b>${money(amt)}</b>. Zahlst du nicht, kommen <b>1 % Zinsen pro Tag</b> dazu, nach 30 Tagen −15 % Umsatz (Pfändung).`,buttons:[{label:'Bezahlen',pri:1,fn:()=>{if(S.cash<b.amt){toast('⊗','Nicht genug Cash.');return false;}payBill(b.id);}},{label:'Später'}]});
 }
 function endQuarter(){
   const a=S.q.actual,t=S.q.target,beat=a>=t;let re=0;
@@ -661,8 +662,8 @@ function notify(o){const el=document.createElement('div');el.className='notif'+(
     bt.onclick=e=>{e.stopPropagation();const r=b.fn?b.fn(o,bt):undefined;if(!b.keep&&r!==false)closeNotif(o);render(true);};nb.appendChild(bt);});
   el.querySelector('.nx').onclick=()=>{if(o.onTimeout)o.onTimeout();closeNotif(o);};
   o.el=el;o.left=o.time;o.bar=el.querySelector('.nt i');R.notifs.push(o);$('#notifs').appendChild(el);
-  const quiet=R.notifs.filter(n=>n.quiet);while(R.notifs.length>4&&quiet.length){closeNotif(quiet.shift());}
-  while(R.notifs.length>5){const old=R.notifs.find(n=>n.time&&n!==o)||R.notifs[0];closeNotif(old);if(old.onTimeout)setTimeout(old.onTimeout,0);}
+  const quiet=R.notifs.filter(n=>n.quiet);while(R.notifs.length>3&&quiet.length){closeNotif(quiet.shift());}
+  while(R.notifs.length>4){const old=R.notifs.find(n=>n.time&&n!==o)||R.notifs[0];closeNotif(old);if(old.onTimeout)setTimeout(old.onTimeout,0);}
   return o;}
 function closeNotif(o){o.el.remove();R.notifs=R.notifs.filter(n=>n!==o);}
 function toast(icon,msg,opt={}){return notify({icon,msg,time:opt.urgent?7:5,quiet:1,urgent:opt.urgent});}
@@ -712,6 +713,8 @@ function viewCompany(){const L=[];
   L.push({c:`${K('export const')} ${V('ledger')}: ${T('Ledger')} = ${P('{')}`});
   L.push({c:`  ${V('cash')}: ${Vv('cash','s')}, ${Vv('cashCm','cm')}`});
   L.push({c:`  ${V('quarter')}: ${Vv('qStr','s')}, ${Vv('qCm','cm')}`});
+  if(S.taxes.bills.length)L.push({lens:A('payall','payL','payE'),ind:2});
+  L.push({c:`  ${V('taxes')}: ${Vv('taxStr','s')}, ${Vv('taxCm','cm')}`});
   L.push({c:P('};')});
   L.push({c:''});
   L.push({c:`${K('export const')} ${V('departments')} = ${P('{')}`});
@@ -721,9 +724,14 @@ function viewCompany(){const L=[];
     else if(!d.auto)it.push(A(`auto:${i}`,`d${i}.autoL`,`d${i}.autoE`));
     else if(S.ipo)it.push(A(`star:${i}`,`d${i}.starL`,`d${i}.starE`));
     L.push({lens:lens(it),ind:2});
-    const gold=R.golden&&R.golden.i===i;
+    const gold=R.golden&&R.golden.i===i,al=(h,w)=>`<span class="al" style="min-width:${w}ch">${h}</span>`;
     L.push({id:'dl'+i,cls:gold?'golden':'',a:gold?`golden:${i}`:'',gut:gold?'<i class="bulb">💡</i>':'',
-      c:`  <span class="v ident" data-a="focus:${i}" title="Klicken = Management-Fokus (+25 %)">${D.id}</span>: ${F('dept')}${P('({')} ${V('staff')}: ${Vv(`d${i}.staff`)}, ${V('lvl')}: ${Vv(`d${i}.lvl`)}, ${V('perDay')}: ${Vv(`d${i}.perDay`,'s')}, ${d.auto||S.ext.hook?`${V('auto')}: ${K('true')}`:`${V('uncommitted')}: ${Vv(`d${i}.pend`,'s')}`} ${P('}),')} ${Vv(`d${i}.cm`,'cm')}`});});
+      c:`  <span class="v ident" data-a="focus:${i}" title="Klicken = Management-Fokus (+25 %)">${D.id}</span>: ${F('dept')}${P('({')} ${Vv(`d${i}.head`,'cm')}`});
+    L.push({c:`    ${al(`${V('staff')}: ${Vv(`d${i}.staff`)},`,24)} ${Vv(`d${i}.staffCm`,'cm')}`});
+    L.push({c:`    ${al(`${V('level')}: ${Vv(`d${i}.lvl`)},`,24)} ${Vv(`d${i}.lvlCm`,'cm')}`});
+    L.push({c:`    ${al(`${V('perDay')}: ${Vv(`d${i}.perDay`,'s')},`,24)} ${Vv(`d${i}.perCm`,'cm')}`});
+    L.push({c:`    ${al(d.auto||S.ext.hook?`${V('auto')}: ${K('true')},`:`${V('uncommitted')}: ${Vv(`d${i}.pend`,'s')},`,24)} ${Vv(`d${i}.pendCm`,'cm')}`});
+    L.push({c:`  ${P('}),')}`});});
   const nl=S.depts.findIndex(d=>!d.unlocked);
   if(nl>=0)L.push({c:`  ${C(`// TODO ${DEPTS[nl].id}: kommt ab ${money(DEPTS[nl].unlock)} Gesamtumsatz`)} ${Vv('nextCm','cm')}`});
   L.push({c:P('};')});
@@ -830,7 +838,7 @@ function viewBoss(){return BOSS_PY.split('\n').map(l=>({c:hlPy(l)}));}
 
 const VIEWS={company:viewCompany,finance:viewFinance,team:viewTeam,settings:viewSettings,readme:viewReadme};
 function editorKey(){if(R.boss)return 'boss';if(!R.tabs.length)return 'empty';const v=R.view;let k=v;
-  if(v==='company')k+=S.depts.map(d=>(d.unlocked?1:0)+''+(d.auto?1:0)).join('')+'|'+(R.golden?R.golden.i:'-')+S.ipo+!!S.ext.hook;
+  if(v==='company')k+=S.depts.map(d=>(d.unlocked?1:0)+''+(d.auto?1:0)).join('')+'|'+(R.golden?R.golden.i:'-')+S.ipo+!!S.ext.hook+S.taxes.bills.length;
   if(v==='finance')k+=[S.q.guidance,guidanceLocked(),S.seriesA.offered,S.seriesA.done,ipoReady(),S.ipo,S.history.length,S.q.n].join();
   if(v==='team')k+=[S.seriesA.done,S.suite.cfo,S.suite.cto,S.suite.coo].join();
   if(v==='settings')k+=JSON.stringify(S.opts)+S.speed+S.paused;
@@ -900,7 +908,7 @@ function buildTabs(){const t=$('#tabs');
 function problemsKey(){return S.taxes.bills.map(b=>b.id+':'+(b.age>=15)+(b.age>=30)).join()+'|'+S.depts.map(d=>d.unlocked&&!d.auto&&!S.ext.hook&&d.staff&&d.pending>=deptRate(S.depts.indexOf(d),1)*119?1:0).join('')+(R.crisis?R.crisis.id:'');}
 function buildProblems(){const el=$('#p-prob');let h='';
   if(R.crisis)h+=`<div class="prob"><span class="ic e">⊗</span>${R.crisis.title}: Abteilungen gestört <span class="pd">firma</span></div>`;
-  for(const b of S.taxes.bills)h+=`<div class="prob"><span class="ic ${b.age>=15?'e':'w'}">${b.age>=15?'⊗':'⚠'}</span>Steuerbescheid #${b.id}: <span data-v="bill${b.id}"></span> ${b.age>=30?'– Pfändung aktiv (−15 % Umsatz)':b.age>=15?'– 2. Mahnung':''} <span class="pd">finance.ts</span><button data-a="paybill:${b.id}" data-en="billE${b.id}">Bezahlen</button></div>`;
+  for(const b of S.taxes.bills)h+=`<div class="prob"><span class="ic ${b.age>=15?'e':'w'}">${b.age>=15?'⊗':'⚠'}</span>Steuerbescheid #${b.id}: <span data-v="bill${b.id}"></span> <span class="pd" data-v="billCm${b.id}"></span><button data-a="paybill:${b.id}" data-en="billE${b.id}">Bezahlen</button></div>`;
   S.depts.forEach((d,i)=>{if(d.unlocked&&!d.auto&&!S.ext.hook&&d.staff&&d.pending>=deptRate(i,1)*119)h+=`<div class="prob"><span class="ic w">⚠</span>${DEPTS[i].file}: uncommitted Umsatz ist voll – committen! <span class="pd">company.ts</span><button data-a="commit:${i}">Commit</button></div>`;});
   el.innerHTML=h||'<div class="tl tg" style="font-family:system-ui">Im Arbeitsbereich wurden bisher keine Probleme erkannt.</div>';}
 
@@ -912,16 +920,22 @@ function computeVals(){const v={},rate=totalRate();
     v[k+'.staff']=String(d.staff);v[k+'.lvl']=String(d.lvl);v[k+'.perDay']=`"${money(r)}"`;v[k+'.pend']=`"${money(d.pending)}"`;
     const full=!d.auto&&d.staff&&d.pending>=deptRate(i,1)*119;
     v[k+'.cm']=['//',d.star?'★'.repeat(d.star):'',d.focus?`⚡${'█'.repeat(d.focus)}${'░'.repeat(8-d.focus)} ×${(1+.25*d.focus).toFixed(2)}`:'',d.bt>1?`🔬×${d.bt}`:'',full?'⚠ voll – committen!':'',d.auto?'auto':''].filter(Boolean).join(' ');if(v[k+'.cm']==='//')v[k+'.cm']='';
-    v[k+'.hireL']=`Einstellen ${money(hc)}`;v[k+'.hireE']=S.cash>=hc&&!blocked();
+    const per=DEPTS[i].rev*(1+.5*d.lvl)*Math.pow(10,d.star)*(1+.25*d.focus)*d.bt*R.gm,m=1+.5*d.lvl;
+    v[k+'.head']=`// ${DEPTS[i].name} · Name anklicken = Fokus${d.focus?` ⚡${'█'.repeat(d.focus)}${'░'.repeat(8-d.focus)} +${d.focus*25} %`:''}${d.bt>1?` · 🔬 Durchbruch ×${d.bt}`:''}${d.star?' · '+'★'.repeat(d.star)+' ×'+Math.pow(10,d.star):''}`;
+    v[k+'.staffCm']=`// jede Person bringt +${money(per)}/Tag`;
+    v[k+'.lvlCm']=`// Output ×${m.toFixed(1)} · nächstes Upgrade → ×${(m+.5).toFixed(1)} (+${Math.round(.5/m*100)} % Umsatz)`;
+    v[k+'.perCm']=`// ${rate>0?Math.round(r/rate*100):0} % deines Gesamtumsatzes`;
+    v[k+'.pendCm']=d.auto||S.ext.hook?'// sammelt automatisch ein':!d.staff?'// zuerst jemanden einstellen':full?'// ⚠ VOLL – jetzt committen, sonst geht Umsatz verloren!':`// voll in ${Math.ceil((deptRate(i,1)*120-d.pending)/Math.max(r,1e-9))} Tagen – dann committen`;
+    v[k+'.hireL']=`Einstellen ${money(hc)} → +${money(per)}/Tag`;v[k+'.hireE']=S.cash>=hc&&!blocked();
     v[k+'.maxL']=`Max (${mx})`;v[k+'.maxE']=mx>0&&!blocked();
-    v[k+'.upL']=`Upgrade → Lv${d.lvl+1} ${money(uc)}`;v[k+'.upE']=S.cash>=uc&&d.staff>0&&!blocked();
-    v[k+'.autoL']=`Automatisieren ${money(ac)}`;v[k+'.autoE']=S.cash>=ac&&!blocked();
+    v[k+'.upL']=`Upgrade Lv${d.lvl+1} ${money(uc)} → +${Math.round(.5/m*100)} % (+${money(r*.5/m)}/Tag)`;v[k+'.upE']=S.cash>=uc&&d.staff>0&&!blocked();
+    v[k+'.autoL']=`Automatisieren ${money(ac)} (kein Committen mehr)`;v[k+'.autoE']=S.cash>=ac&&!blocked();
     v[k+'.comL']=`✓ Commit ${money(d.pending)}`;v[k+'.comE']=d.pending>0.005&&!blocked();
     v[k+'.starL']=`★ Restrukturieren ${money(starCost(i))} (×10)`;v[k+'.starE']=S.cash>=starCost(i)&&!blocked();
     v['ex'+i]=d.auto||S.ext.hook?'':d.pending>0.005?'M':'';v['scm'+i]='+'+money(d.pending);});
   const nl=S.depts.findIndex(d=>!d.unlocked);if(nl>=0)v.nextCm=`(${Math.floor(S.total/DEPTS[nl].unlock*100)} %)`;
   const pend=S.depts.reduce((a,d)=>a+(d.auto?0:d.pending),0),pc=S.depts.filter(d=>!d.auto&&d.pending>0.005).length;
-  v.otL=`▶ npm run overtime (+${money(overtimeGain())})`;v.otE=!blocked();v.caL=`✓ Alles committen (+${money(pend)})`;v.caE=pend>0.005&&!blocked();
+  const eff=n=>Math.round(100/(1+.18*n));v.otL=`▶ npm run overtime: +${money(overtimeGain())} (Effizienz ${eff(S.q.overtime)} %, danach ${eff(S.q.overtime+1)} % – neues Quartal = wieder 100 %)`;v.otE=!blocked();v.caL=`✓ Alles committen (+${money(pend)})`;v.caE=pend>0.005&&!blocked();
   v.scmBadge=pc?String(pc):'';v.scmStar=pc?'*':'';v.scmBtn=`✓ Commit (+${money(pend)})`;
   const affordable=EXT.filter(e=>(e.repeat||!S.ext[e.id])&&(!e.req||S.ext[e.req])&&S.re>=extCost(e)).length;v.extBadge=affordable?String(affordable):'';
   v.reAvail=int(S.re);EXT.forEach(e=>{v['extc.'+e.id]=int(extCost(e));v['ext.'+e.id]=S.re>=extCost(e);});
@@ -933,8 +947,12 @@ function computeVals(){const v={},rate=totalRate();
   const bl=Math.max(0,Math.min(10,Math.floor(pct*10)));v.fAcm=`// ${Math.floor(pct*100)} % ${'█'.repeat(bl)}${'░'.repeat(10-bl)} ${pct>=1?'✓ Ziel erreicht':'Prognose '+money(S.q.actual+rate*(90-qDay()))}`;
   v.fS=`"${streakIcon()} ${Math.abs(S.streak)}"`;v.fScm=S.streak>0?`// ${S.streak} Beats in Folge · RE-Bonus ×${streakMult().toFixed(1)}`:S.streak<0?`// ${-S.streak} Misses in Folge`:'// noch keine Serie';
   v.fRE=int(S.re);v.tRate=String(taxRate());const nd=(45-(S.day%90)+90)%90||90;v.tNext=`"in ${Math.ceil(nd)} Tagen"`;v.tQR=`"${money(S.taxes.quarterRev)}"`;
-  v.tEst=`// geschätzte Steuer ~${money(Math.max(taxRate()*(S.taxes.quarterRev-S.taxes.capex.slice(1).concat(S.taxes.curCapex).reduce((a,b)=>a+b,0)/4),.15*S.taxes.quarterRev))}`;
+  const estTax=Math.max(taxRate()*(S.taxes.quarterRev-S.taxes.capex.slice(1).concat(S.taxes.curCapex).reduce((a,b)=>a+b,0)/4),.15*S.taxes.quarterRev);v.tEst=`// geschätzte Steuer ~${money(estTax)} (Bescheid kommt an Tag 45 jedes Quartals)`;
   v.tDep=`"${money(S.taxes.lastDep)}"`;v.tOpen=String(S.taxes.bills.length);
+  const open=S.taxes.bills.reduce((a,b)=>a+b.amt,0),oldest=S.taxes.bills.reduce((a,b)=>Math.max(a,b.age),0);
+  v.taxStr=S.taxes.bills.length?`"${money(open)} offen"`:`"nächster Bescheid in ${Math.ceil(nd)} Tagen"`;
+  v.taxCm=S.taxes.bills.length?`// ⚠ 1 % Zinsen pro Tag! ${oldest<30?`Pfändung (−15 % Umsatz) in ${30-oldest} Tagen`:`Pfändung aktiv – Kontopfändung in ${60-oldest} Tagen`}`:`// Steuer ≈ ${money(estTax)} · Zinsen nur, wenn du nicht sofort zahlst`;
+  v.payL=`🧾 Steuern jetzt bezahlen (${money(open)}) – stoppt die Zinsen`;v.payE=S.cash>=open;
   v.saL=`💰 Series A annehmen (+${money(seriesAAmount())})`;
   v.ipoCm=S.seriesA.done?`// ab $25M Jahresumsatz (aktuell ${money(annualRev())})`:'// zuerst Series A';
   if(S.ipo){const pr=valuation()/1e8,prev=S.stock.length>1?S.stock[S.stock.length-2]:pr,ch=(pr-prev)/prev*100;
@@ -946,7 +964,7 @@ function computeVals(){const v={},rate=totalRate();
   for(const r of ['cfo','cto','coo']){const lv=S.suite[r];if(lv<3){const c=SUITE[r].cost[lv];v[`su.${r}L`]=`${lv?'Upgrade → Lv'+(lv+1):'Einstellen'} (${SUITE[r].lv[lv]}) ${money(c)}`;v[`su.${r}E`]=S.cash>=c;}v[`su.${r}Pct`]=(S.suite[r+'Pct']??0)+' %';}
   const st=S.stats;Object.assign(v,{'st.hires':int(st.hires),'st.upgrades':int(st.upgrades),'st.autos':int(st.autos),'st.commits':int(st.commits),'st.ot':int(st.overtime),'st.tasks':int(st.tasks),'st.deals':int(st.deals),'st.golden':int(st.golden),'st.events':int(st.events),'st.beats':int(st.beats),'st.misses':int(st.misses),'st.reT':int(S.reTotal),'st.tax':`"${money(st.taxesPaid)}"`,'st.cto':int(st.ctoBuys),'st.coo':int(st.cooHires),'st.free':`"${money(freeCash())}"`,'st.total':`"${money(S.total)}"`,'st.time':`"${Math.floor(S.day)} Tage"`});
   // problems & status
-  let e=0,w=0;for(const b of S.taxes.bills){b.age>=15?e++:w++;v['bill'+b.id]=money(b.amt);v['billE'+b.id]=S.cash>=b.amt;}
+  let e=0,w=0;for(const b of S.taxes.bills){b.age>=15?e++:w++;v['bill'+b.id]=money(b.amt);v['billCm'+b.id]=`· +1 %/Tag Zinsen (seit ${b.age} Tagen) · ${b.age<30?`Pfändung −15 % in ${30-b.age} Tagen`:`Pfändung aktiv · Kontopfändung in ${60-b.age} Tagen`}`;v['billE'+b.id]=S.cash>=b.amt;}
   S.depts.forEach((d,i)=>{if(d.unlocked&&!d.auto&&!S.ext.hook&&d.staff&&d.pending>=deptRate(i,1)*119)w++;});if(R.crisis)e++;
   v.errs=String(e);v.warns=String(w);v.probCount=e+w?String(e+w):'';
   v.sbCash=`⟳ ${money(S.cash)}  (+${money(rate)}/Tag)`;v.sbQ=`${streakIcon()} ${qLabel()} · Tag ${qDay()} · ${Math.min(999,Math.floor(pct*100))} %`;v.sbRE=`🧩 ${int(S.re)} RE`;
@@ -977,7 +995,7 @@ function setTheme(t){S.opts.theme=t;document.body.classList.toggle('light',t==='
 
 /* ================= INPUT ================= */
 function act(a,el){const [c,arg]=a.split(':'),i=parseInt(arg,10);
-  const needOk=['hire','hmax','up','auto','commit','star','overtime','commitall','golden','focus','paybill'];
+  const needOk=['hire','hmax','up','auto','commit','star','overtime','commitall','golden','focus','paybill','payall'];
   if(needOk.includes(c)&&blocked()){toast('⊗','Erst die Krise lösen!');return;}
   if(el&&el.classList&&el.classList.contains('dis'))return;
   let r;
@@ -1004,6 +1022,7 @@ function act(a,el){const [c,arg]=a.split(':'),i=parseInt(arg,10);
     case 'suite':hireSuite(arg);break;
     case 'ext':buyExt(arg);break;
     case 'paybill':payBill(i);break;
+    case 'payall':for(const b of [...S.taxes.bills])payBill(b.id);break;
     case 'opt':S.opts[arg]=!S.opts[arg];break;
     case 'setth':setTheme(arg);break;
     case 'theme':setTheme(S.opts.theme==='dark'?'light':'dark');break;
