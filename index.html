@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>company.ts — firma</title>
+<style>
+:root{
+  --bg:#1f1f1f;--side:#181818;--title:#181818;--border:#2b2b2b;--fg:#cccccc;--dim:#8b8b8b;--accent:#0078d4;
+  --tab:#181818;--tabA:#1f1f1f;--hover:#2a2d2e;--sel:#04395e;--lineHL:#282828;--gutter:#6e7681;
+  --k:#569cd6;--k2:#c586c0;--s:#ce9178;--n:#b5cea8;--cm:#6a9955;--f:#dcdcaa;--t:#4ec9b0;--v:#9cdcfe;--p:#cccccc;--lens:#999999;
+  --notif:#252526;--btn:#0078d4;--btn2:#313131;--err:#f14c4c;--warn:#cca700;--ok:#89d185;--gold:rgba(255,204,0,.16);
+  --input:#313131;--badge:#0078d4;--scroll:rgba(121,121,121,.4);
+}
+body.light{
+  --bg:#ffffff;--side:#f8f8f8;--title:#f8f8f8;--border:#e5e5e5;--fg:#3b3b3b;--dim:#717171;--tab:#f8f8f8;--tabA:#ffffff;
+  --hover:#f0f0f0;--sel:#cce6ff;--lineHL:#f6f6f6;--gutter:#6e7681;
+  --k:#0000ff;--k2:#af00db;--s:#a31515;--n:#098658;--cm:#008000;--f:#795e26;--t:#267f99;--v:#001080;--p:#3b3b3b;--lens:#8a8a8a;
+  --notif:#f3f3f3;--btn2:#e5e5e5;--input:#ffffff;--gold:rgba(255,190,0,.22);--scroll:rgba(100,100,100,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:13px -apple-system,"Segoe UI",system-ui,Ubuntu,"Droid Sans",sans-serif;overflow:hidden;user-select:none}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--scroll)}::-webkit-scrollbar-corner{background:transparent}
+.mono{font-family:Consolas,"Cascadia Code","Courier New",monospace}
+/* title bar */
+#titlebar{height:35px;display:flex;align-items:center;background:var(--title);border-bottom:1px solid var(--border);flex:none;position:relative}
+#logo{width:35px;display:flex;justify-content:center}
+#logo svg{width:16px;height:16px}
+#menus{display:flex;flex:none;margin-right:12px}
+#menus>div{padding:3px 8px;border-radius:4px;cursor:default;position:relative}
+#menus>div:hover,#menus>div.open{background:var(--hover)}
+.dd{position:absolute;top:28px;left:0;min-width:240px;background:var(--notif);border:1px solid var(--border);border-radius:6px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,.35);z-index:200;display:none}
+#menus>div.open .dd{display:block}
+.dd div{padding:4px 22px;border-radius:4px;display:flex;justify-content:space-between;gap:30px;white-space:nowrap}
+.dd div:hover{background:var(--accent);color:#fff}
+.dd div.off{opacity:.45}.dd div.off:hover{background:none;color:inherit}
+.dd hr{border:0;border-top:1px solid var(--border);margin:4px 0}
+.dd kbd{font:inherit;opacity:.7}
+#cmdcenter{flex:0 1 500px;min-width:120px;margin:0 auto;height:24px;border:1px solid var(--border);border-radius:6px;background:var(--input);display:flex;align-items:center;justify-content:center;gap:6px;color:var(--dim);cursor:pointer;font-size:12px}
+#cmdcenter:hover{border-color:#555}
+#winctl{display:flex;height:100%;flex:none}
+#winctl span{width:46px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:default}
+#winctl span:hover{background:var(--hover)}#winctl span.x:hover{background:#e81123;color:#fff}
+/* layout */
+#main{flex:1;display:flex;min-height:0}
+#activity{width:48px;flex:none;background:var(--side);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center}
+#activity .ai{width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer;position:relative;border-left:2px solid transparent}
+#activity .ai:hover{color:var(--fg)}
+#activity .ai.on{color:var(--fg);border-left-color:var(--accent)}
+#activity .ai svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.5}
+#activity .sp{flex:1}
+.badge{position:absolute;right:7px;bottom:8px;background:var(--badge);color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;font-weight:600}
+.badge:empty{display:none}
+#sidebar{width:270px;flex:none;background:var(--side);border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+#sidebar.hidden{display:none}
+.sh{height:35px;display:flex;align-items:center;padding:0 8px 0 20px;font-size:11px;letter-spacing:.3px;text-transform:uppercase;flex:none}
+.sh .dots{margin-left:auto;opacity:.7}
+.sbody{flex:1;overflow:auto}
+.sect{font-size:11px;font-weight:700;padding:3px 6px;text-transform:uppercase;cursor:pointer}
+.row{display:flex;align-items:center;height:22px;padding-right:8px;cursor:pointer;white-space:nowrap}
+.row:hover{background:var(--hover)}
+.row.act{background:var(--sel)}
+.row.ign{opacity:.45}
+.row .tw{width:16px;text-align:center;opacity:.8;flex:none}
+.fi{display:inline-flex;width:18px;justify-content:center;font-size:10px;font-weight:700;margin-right:5px;flex:none;font-family:Consolas,monospace}
+.fi.ts{color:#3178c6}.fi.js{color:#e8d44d}.fi.json{color:#cbcb41}.fi.yaml{color:#c95b7a}.fi.md{color:#519aba}.fi.py{color:#3e7cbf}.fi.go{color:#00add8}.fi.rs{color:#de6b3a}.fi.cpp{color:#659ad2}.fi.tsx{color:#4fc1e9}.fi.git{color:#e44d26}.fi.txt{color:#8b8b8b}
+.row .rr{margin-left:auto;font-size:11px;opacity:.8;padding-left:8px}
+.row .rr.m{color:#e2c08d}
+.scmbox{padding:6px 12px 8px 20px}
+.scmbox textarea{width:100%;resize:none;height:28px;background:var(--input);color:var(--fg);border:1px solid var(--border);border-radius:2px;font:inherit;padding:5px 6px;outline:none}
+.scmbox textarea:focus{border-color:var(--accent)}
+.bigbtn{margin-top:6px;width:100%;background:var(--btn);color:#fff;border:0;border-radius:2px;padding:5px;font:inherit;cursor:pointer}
+.bigbtn:hover{filter:brightness(1.1)}
+.bigbtn.dis{opacity:.5;cursor:default;filter:none}
+.extcard{display:flex;gap:10px;padding:8px 10px 8px 20px;cursor:default}
+.extcard:hover{background:var(--hover)}
+.exticon{width:40px;height:40px;border-radius:4px;flex:none;display:flex;align-items:center;justify-content:center;font-size:21px}
+.extinfo{min-width:0;flex:1}
+.extinfo b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.extinfo .ed{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.extinfo .ep{display:flex;align-items:center;gap:6px;font-size:12px;opacity:.85;margin-top:2px}
+.extinfo .ep .pub{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.extbtn{background:var(--btn);color:#fff;border:0;border-radius:2px;padding:1px 6px;font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+.extbtn.dis{opacity:.45;cursor:default}
+.extbtn.inst{background:var(--btn2);color:var(--fg);cursor:default}
+.search{margin:4px 12px 8px 20px;height:26px;background:var(--input);border:1px solid var(--border);display:flex;align-items:center;padding:0 6px;color:var(--dim);font-size:12px}
+.vars .row{height:22px;font-family:Consolas,monospace;font-size:12.5px}
+.vars .vn{color:var(--v)}.vars .vv{color:var(--n);margin-left:4px}
+/* center */
+#center{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+#tabs{height:35px;display:flex;background:var(--tab);flex:none;overflow-x:auto;overflow-y:hidden}
+#tabs::-webkit-scrollbar{height:3px}
+.tab{display:flex;align-items:center;gap:4px;padding:0 6px 0 10px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;color:var(--dim);min-width:fit-content}
+.tab.on{background:var(--tabA);color:var(--fg);border-bottom-color:transparent;box-shadow:inset 0 1px 0 var(--accent)}
+.tab .tx{width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:4px;visibility:hidden;font-size:14px}
+.tab.on .tx,.tab:hover .tx{visibility:visible}
+.tab .tx:hover{background:var(--hover)}
+.tabfill{flex:1;border-bottom:1px solid var(--border)}
+#crumbs{height:22px;display:flex;align-items:center;padding-left:18px;color:var(--dim);font-size:12.5px;flex:none;background:var(--bg);gap:4px;white-space:nowrap;overflow:hidden}
+#editorwrap{flex:1;display:flex;min-height:0;background:var(--bg);position:relative}
+#editor{flex:1;overflow:auto;font-family:Consolas,"Cascadia Code","Courier New",monospace;font-size:14px;line-height:19px;padding-bottom:40px;cursor:text}
+#minimap{width:70px;flex:none;opacity:.5;padding-top:2px;overflow:hidden;border-left:1px solid transparent}
+#minimap i{display:block;height:2px;margin:1px 0 1px 6px;border-radius:1px;background:var(--dim);opacity:.6}
+.ln{display:flex;min-height:19px;white-space:pre}
+.ln:hover{background:var(--lineHL)}
+.ln .g{width:64px;flex:none;text-align:right;padding-right:22px;color:var(--gutter);position:relative}
+.ln .c{flex:1;padding-left:2px}
+.ln.lens{min-height:20px;line-height:20px;font:12px -apple-system,"Segoe UI",system-ui,sans-serif;color:var(--lens)}
+.ln.lens:hover{background:transparent}
+.ln.lens .ind{font:14px Consolas,"Cascadia Code","Courier New",monospace}
+.lens a{cursor:pointer;color:var(--lens)}
+.lens a:hover{color:var(--accent);text-decoration:underline}
+.lens a.dis{opacity:.5;cursor:text;color:var(--lens)!important;text-decoration:none!important}
+.lens a.sel{color:var(--fg);font-weight:600}
+.lens .sep{margin:0 5px;opacity:.6}
+.ln.golden{background:var(--gold)!important;box-shadow:inset 3px 0 #ffcc00;cursor:pointer;animation:gp 1.1s ease-in-out infinite}
+@keyframes gp{50%{background:transparent}}
+.bulb{position:absolute;left:4px;top:0;font-style:normal;font-size:13px;animation:bob 1s infinite}
+@keyframes bob{50%{transform:translateY(-2px)}}
+.ident{cursor:pointer;border-radius:2px}
+.ident:hover{background:rgba(120,160,255,.18);text-decoration:underline dotted}
+.k{color:var(--k)}.k2{color:var(--k2)}.s{color:var(--s)}.n{color:var(--n)}.cm{color:var(--cm)}.f{color:var(--f)}.t{color:var(--t)}.v{color:var(--v)}.p{color:var(--p)}
+.md-h{color:var(--k);font-weight:700}.md-b{font-weight:700}
+.flash{animation:fl 1.2s}
+@keyframes fl{0%,40%{background:rgba(0,120,212,.35)}}
+.tog{cursor:pointer}.tog:hover{text-decoration:underline}
+input[type=range]{vertical-align:middle;width:140px;height:12px;accent-color:var(--accent)}
+.empty{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;color:var(--dim);gap:8px;font-family:system-ui}
+.empty kbd{background:var(--btn2);padding:1px 6px;border-radius:3px;font:12px system-ui}
+/* panel */
+#panel{height:210px;flex:none;border-top:1px solid var(--border);background:var(--side);display:flex;flex-direction:column}
+#panel.hidden{display:none}
+#ptabs{height:35px;display:flex;align-items:center;padding:0 8px;gap:2px;flex:none;font-size:11px;text-transform:uppercase}
+#ptabs .pt{padding:6px 10px;cursor:pointer;color:var(--dim);border-bottom:1px solid transparent;display:flex;gap:6px;align-items:center}
+#ptabs .pt:hover{color:var(--fg)}
+#ptabs .pt.on{color:var(--fg);border-bottom-color:var(--fg)}
+#ptabs .cnt{background:var(--btn2);color:var(--fg);border-radius:9px;padding:0 6px;font-size:10px}
+#ptabs .cnt:empty{display:none}
+#ptabs .pr{margin-left:auto;display:flex;gap:12px;color:var(--dim);font-size:14px;text-transform:none}
+#pbody{flex:1;overflow:auto;font-family:Consolas,"Cascadia Code","Courier New",monospace;font-size:13px;line-height:18px;padding:0 20px 6px}
+#term{user-select:text}
+.tl{white-space:pre-wrap;word-break:break-word}
+.tl .tg{color:var(--dim)}
+.tl.ok{color:var(--ok)}.tl.err{color:var(--err)}.tl.warn{color:var(--warn)}.tl.info{color:#3794ff}.tl.gold{color:#e5c07b}
+.prompt{display:flex;align-items:center}
+.prompt span{white-space:pre;color:var(--fg)}
+.prompt input{flex:1;background:transparent;border:0;outline:none;color:var(--fg);font:inherit;padding:0}
+.prob{display:flex;align-items:center;gap:8px;height:22px;font-family:system-ui;font-size:13px;cursor:default}
+.prob:hover{background:var(--hover)}
+.prob .ic{width:16px;text-align:center}
+.prob .ic.e{color:var(--err)}.prob .ic.w{color:var(--warn)}
+.prob .pd{opacity:.65;font-size:12px}
+.prob button,.mini{background:var(--btn);color:#fff;border:0;border-radius:2px;padding:1px 8px;font:12px system-ui;cursor:pointer;margin-left:6px}
+/* status bar */
+#status{height:22px;flex:none;background:var(--side);border-top:1px solid var(--border);display:flex;align-items:center;font-size:12px;color:var(--fg);padding-right:6px}
+#status .si{padding:0 6px;height:100%;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap}
+#status .si:hover{background:var(--hover)}
+#status .remote{background:var(--accent);color:#fff;padding:0 10px;margin-right:4px}
+#status .sp{flex:1}
+/* notifications */
+#notifs{position:fixed;right:12px;bottom:32px;width:440px;display:flex;flex-direction:column;gap:8px;z-index:150}
+.notif{background:var(--notif);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.45);padding:10px 12px 10px;position:relative;overflow:hidden;animation:nin .18s ease-out}
+@keyframes nin{from{transform:translateY(12px);opacity:0}}
+.nh{display:flex;gap:10px;align-items:flex-start}
+.ni{font-size:15px;line-height:18px;flex:none;width:18px;text-align:center}
+.nm{flex:1;line-height:18px}
+.nm b{font-weight:600}
+.nx{cursor:pointer;opacity:.7;padding:0 3px;border-radius:3px}.nx:hover{background:var(--hover);opacity:1}
+.nb{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;flex-wrap:wrap}
+.nb:empty{display:none}
+.nb button{background:var(--btn2);color:var(--fg);border:0;border-radius:2px;padding:4px 12px;font:inherit;cursor:pointer}
+.nb button.pri{background:var(--btn);color:#fff}
+.nb button:hover{filter:brightness(1.15)}
+.nt{position:absolute;left:0;bottom:0;height:2px;width:100%;background:transparent}
+.nt i{display:block;height:100%;background:var(--accent);width:100%}
+.notif.urgent .nt i{background:#e5a00d}
+/* palette */
+#palette{position:fixed;top:44px;left:50%;transform:translateX(-50%);width:600px;max-width:90vw;background:var(--notif);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.5);z-index:300;display:none;padding:6px}
+#palette input{width:100%;background:var(--input);border:1px solid var(--accent);color:var(--fg);font:13px system-ui;padding:5px 8px;outline:none;border-radius:2px}
+#plist{max-height:340px;overflow:auto;margin-top:4px}
+#plist div{padding:4px 10px;border-radius:3px;cursor:pointer;display:flex;justify-content:space-between}
+#plist div.on{background:var(--sel)}
+#plist div kbd{opacity:.6;font:12px system-ui}
+/* floating numbers */
+.float{position:fixed;pointer-events:none;font:600 13px Consolas,monospace;color:var(--ok);z-index:400;animation:flt 1.1s ease-out forwards;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+@keyframes flt{to{transform:translateY(-40px);opacity:0}}
+.conf{position:fixed;top:-10px;width:7px;height:11px;z-index:390;pointer-events:none;animation:cf linear forwards}
+@keyframes cf{to{transform:translateY(105vh) rotate(720deg)}}
+/* crises */
+#crisis{position:absolute;inset:0;z-index:60;display:none}
+#crisis.on{display:block}
+.cr-hang{background:rgba(255,255,255,.18);backdrop-filter:blur(3px) grayscale(.6);display:flex;align-items:center;justify-content:center;height:100%}
+.cr-box{background:var(--notif);border:1px solid var(--border);border-radius:8px;padding:20px 24px;width:420px;box-shadow:0 10px 40px rgba(0,0,0,.5);font-family:system-ui}
+.cr-box h3{margin:0 0 8px;font-weight:600;font-size:15px}
+.cr-box p{margin:0 0 14px;opacity:.85;line-height:1.4}
+.cr-box .bt{display:flex;gap:8px;justify-content:flex-end}
+.cr-bsod{background:#0b62c4;color:#fff;height:100%;padding:8% 10%;font-family:"Segoe UI",system-ui;cursor:default}
+.cr-bsod .face{font-size:110px;line-height:1}
+.cr-bsod p{font-size:20px;max-width:640px;line-height:1.4}
+.cr-ransom{background:#0d0d0d;color:#ff4040;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Consolas,monospace;text-align:center;gap:10px}
+.cr-ransom .lock{font-size:64px}
+.cr-ddos{background:#fff;color:#202124;height:100%;padding:10% 12%;font-family:system-ui}
+.cr-ddos h2{font-weight:500;font-size:24px;margin:16px 0 10px}
+.cr-ddos .code{color:#5f6368;font-size:12px;margin-top:22px}
+.cr-ddos button{background:#1a73e8;color:#fff;border:0;border-radius:4px;padding:8px 22px;font:500 14px system-ui;margin-top:24px;cursor:pointer;margin-right:8px}
+.cr-term{background:#0c0c0c;color:#cccccc;height:100%;padding:16px 20px;font:13px/18px Consolas,monospace;overflow:hidden}
+.cr-merge{background:var(--bg);height:100%;padding-top:10px;font:14px/19px Consolas,monospace}
+.cr-merge .cur{background:rgba(64,200,174,.18)}.cr-merge .inc{background:rgba(64,166,255,.18)}
+.cr-merge .mk{color:var(--dim)}
+/* boss */
+.bossonly{display:none!important}
+body.boss .bossonly{display:revert!important}
+body.boss .gameonly{display:none!important}
+body.boss #notifs,body.boss #crisis,body.boss .conf,body.boss .float{display:none!important}
+</style>
+</head>
+<body>
+<div id="titlebar">
+  <div id="logo"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="3" fill="#3c8ad4"/><path d="M6.2 5 3.5 8l2.7 3M9.8 5l2.7 3-2.7 3" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div id="menus">
+    <div>Datei<div class="dd">
+      <div data-a="save">Speichern<kbd>Strg+S</kbd></div>
+      <div data-a="export">Spielstand exportieren…</div>
+      <div data-a="import">Spielstand importieren…</div>
+      <hr><div data-a="newgame">Neues Spiel</div>
+      <hr><div data-a="boss">Schließen<kbd>Esc</kbd></div></div></div>
+    <div>Bearbeiten<div class="dd"><div class="off">Rückgängig<kbd>Strg+Z</kbd></div><div class="off">Wiederholen<kbd>Strg+Y</kbd></div><hr><div class="off">Ausschneiden</div><div class="off">Kopieren</div><div class="off">Einfügen</div></div></div>
+    <div>Auswahl<div class="dd"><div class="off">Alles auswählen<kbd>Strg+A</kbd></div></div></div>
+    <div>Anzeigen<div class="dd">
+      <div data-a="palette">Befehlspalette…<kbd>Strg+Umschalt+P</kbd></div><hr>
+      <div data-a="side:explorer">Explorer</div><div data-a="side:scm">Quellcodeverwaltung</div><div data-a="side:run">Ausführen und Debuggen</div><div data-a="side:ext">Erweiterungen</div><hr>
+      <div data-a="togglesidebar">Primäre Seitenleiste umschalten<kbd>Strg+B</kbd></div><div data-a="togglepanel">Panel umschalten<kbd>Strg+J</kbd></div><div data-a="theme">Farbdesign wechseln</div></div></div>
+    <div>Gehe zu<div class="dd"><div data-a="open:company">company.ts</div><div data-a="open:finance">finance.ts</div><div data-a="open:team">team.yaml</div><div data-a="open:settings">settings.json</div></div></div>
+    <div>Ausführen<div class="dd"><div data-a="overtime">npm run overtime</div><div data-a="commitall">Alles committen<kbd>Strg+Enter</kbd></div><hr><div data-a="pause">Pause / Weiter</div><div data-a="speed">Geschwindigkeit ändern</div></div></div>
+    <div>Terminal<div class="dd"><div data-a="panel:term">Neues Terminal<kbd>Strg+Ö</kbd></div></div></div>
+    <div>Hilfe<div class="dd"><div data-a="open:readme">README / Spielanleitung</div><div data-a="palette">Alle Befehle anzeigen</div></div></div>
+  </div>
+  <div id="cmdcenter" data-a="palette"><span>⌕</span><span class="gameonly">firma</span><span class="bossonly">informatik</span></div>
+  <div id="winctl"><span>—</span><span>▢</span><span class="x" data-a="boss">✕</span></div>
+</div>
+<div id="main">
+  <div id="activity">
+    <div class="ai on" data-a="side:explorer" title="Explorer"><svg viewBox="0 0 24 24"><path d="M14 3H7a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4M6 7H4.5a.5.5 0 0 0-.5.5V20a1 1 0 0 0 1 1h10a.5.5 0 0 0 .5-.5V19"/></svg></div>
+    <div class="ai" data-a="side:search" title="Suchen"><svg viewBox="0 0 24 24"><circle cx="14" cy="10" r="6"/><path d="M9.5 14.5 4 20"/></svg></div>
+    <div class="ai" data-a="side:scm" title="Quellcodeverwaltung"><svg viewBox="0 0 24 24"><circle cx="7" cy="5" r="2"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="8" r="2"/><path d="M7 7v10M17 10c0 4-10 3-10 7"/></svg><span class="badge gameonly" data-v="scmBadge"></span></div>
+    <div class="ai" data-a="side:run" title="Ausführen und Debuggen"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/><circle cx="6" cy="18" r="0"/></svg></div>
+    <div class="ai" data-a="side:ext" title="Erweiterungen"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="5" height="5"/><rect x="9" y="10" width="5" height="5"/><rect x="4" y="15" width="5" height="5"/><rect x="9" y="15" width="5" height="5"/><rect x="14.5" y="4" width="5" height="5" transform="rotate(12 17 6.5)"/></svg><span class="badge gameonly" data-v="extBadge"></span></div>
+    <div class="sp"></div>
+    <div class="ai" title="Konten"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4"/><path d="M4.5 20c1.5-4 4-5 7.5-5s6 1 7.5 5"/></svg></div>
+    <div class="ai" data-a="open:settings" title="Einstellungen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></div>
+  </div>
+  <div id="sidebar"><div id="side-game" class="gameonly" style="display:flex;flex-direction:column;height:100%"></div><div id="side-boss" class="bossonly"></div></div>
+  <div id="center">
+    <div id="tabs"></div>
+    <div id="crumbs"></div>
+    <div id="editorwrap"><div id="editor"></div><div id="minimap"></div></div>
+    <div id="panel">
+      <div id="ptabs">
+        <div class="pt" data-a="panel:prob">Probleme <span class="cnt gameonly" data-v="probCount"></span></div>
+        <div class="pt" data-a="panel:out">Ausgabe</div>
+        <div class="pt" data-a="panel:debug">Debugkonsole</div>
+        <div class="pt on" data-a="panel:term">Terminal</div>
+        <div class="pr"><span>＋</span><span>⌄</span><span>⋯</span><span data-a="togglepanel" style="cursor:pointer">✕</span></div>
+      </div>
+      <div id="pbody">
+        <div id="p-prob" class="gameonly" style="display:none"></div>
+        <div id="p-out" class="gameonly" style="display:none"></div>
+        <div id="p-debug" style="display:none"><div class="tl tg">Starten Sie eine Debugsitzung, um die Debugkonsole zu verwenden.</div></div>
+        <div id="p-term"><div id="term" class="gameonly"><div id="tlog"></div><div class="prompt"><span>PS C:\Users\schueler\firma&gt; </span><input id="tin" spellcheck="false" autocomplete="off"></div></div><div id="term-boss" class="bossonly"></div></div>
+      </div>
+    </div>
+    <div id="crisis"></div>
+  </div>
+</div>
+<div id="status">
+  <div class="si remote" title="Remote">⇋</div>
+  <div class="si" data-a="side:scm">⑂ main<span class="gameonly" data-v="scmStar"></span></div>
+  <div class="si" data-a="panel:prob">⊗ <span data-v="errs">0</span>&nbsp; ⚠ <span data-v="warns">0</span></div>
+  <div class="si gameonly" data-a="open:company" title="Kontostand"><span data-v="sbCash"></span></div>
+  <div class="si gameonly" data-a="open:finance" title="Earnings"><span data-v="sbQ"></span></div>
+  <div class="si gameonly" data-a="side:ext" title="Retained Earnings"><span data-v="sbRE"></span></div>
+  <div class="si gameonly" data-a="open:finance" data-v="sbStock"></div>
+  <div class="sp"></div>
+  <div class="si gameonly" data-a="speed" title="Geschwindigkeit (klicken)"><span data-v="sbSpeed"></span></div>
+  <div class="si">Zeile <span data-v="sbLn">1</span>, Spalte 1</div>
+  <div class="si">Leerzeichen: 2</div>
+  <div class="si">UTF-8</div>
+  <div class="si">CRLF</div>
+  <div class="si" data-v="sbLang">TypeScript</div>
+  <div class="si">🔔</div>
+</div>
+<div id="notifs"></div>
+<div id="palette"><input id="pin" placeholder="Befehl eingeben…" spellcheck="false"><div id="plist"></div></div>
+<input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+
+<script>
+"use strict";
+/* ================= DATA ================= */
+const DEPTS=[
+  {id:'blog',file:'blog.md',ext:'md',name:'Blog',cost:5,rev:.5,unlock:0},
+  {id:'webshop',file:'webshop.js',ext:'js',name:'Webshop',cost:75,rev:2.5,unlock:60},
+  {id:'app',file:'app.tsx',ext:'tsx',name:'Mobile App',cost:1100,rev:18,unlock:900},
+  {id:'saas',file:'saas.py',ext:'py',name:'SaaS-Plattform',cost:16000,rev:130,unlock:13000},
+  {id:'cloud',file:'cloud.go',ext:'go',name:'Cloud Hosting',cost:2.5e5,rev:1000,unlock:2e5},
+  {id:'aiLab',file:'ai_lab.rs',ext:'rs',name:'KI-Labor',cost:4e6,rev:8000,unlock:3e6},
+  {id:'quantum',file:'quantum.cpp',ext:'cpp',name:'Quantencomputer',cost:7e7,rev:7e4,unlock:5e7},
+  {id:'empire',file:'empire.ts',ext:'ts',name:'Tech-Imperium',cost:1.2e9,rev:6e5,unlock:9e8},
+];
+const EXT=[
+  {id:'mult1',icon:'📈',bg:'#2d6a4f',name:'Revenue Boost I',desc:'Gesamtumsatz ×1,1',cost:50},
+  {id:'mult2',icon:'📈',bg:'#40916c',name:'Revenue Boost II',desc:'Gesamtumsatz ×1,25 (ersetzt I)',cost:300,req:'mult1'},
+  {id:'mult3',icon:'📈',bg:'#52b788',name:'Revenue Boost III',desc:'Gesamtumsatz ×1,5 (ersetzt II)',cost:1500,req:'mult2'},
+  {id:'growth',icon:'🌱',bg:'#386641',name:'Growth Initiative',desc:'+2 % Umsatz pro Installation, beliebig oft',repeat:true},
+  {id:'hook',icon:'🪝',bg:'#6c584c',name:'Pre-Commit Hook',desc:'Nicht automatisierte Abteilungen committen automatisch',cost:150},
+  {id:'cop1',icon:'🔧',bg:'#3a506b',name:'Auto-Fixer',desc:'Erledigt Quick-Fixes automatisch (50 % Belohnung)',cost:100},
+  {id:'cop2',icon:'🔧',bg:'#4a6fa5',name:'Auto-Fixer Pro',desc:'Quick-Fixes automatisch (75 %)',cost:500,req:'cop1'},
+  {id:'cop3',icon:'🔧',bg:'#5b8bd0',name:'Auto-Fixer Enterprise',desc:'Quick-Fixes automatisch (100 %)',cost:2000,req:'cop2'},
+  {id:'bot1',icon:'🤖',bg:'#5f0f40',name:'PR-Bot',desc:'Approved Pull Requests automatisch (50 %)',cost:200},
+  {id:'bot2',icon:'🤖',bg:'#7b2d5b',name:'PR-Bot Pro',desc:'Pull Requests automatisch (75 %)',cost:800,req:'bot1'},
+  {id:'bot3',icon:'🤖',bg:'#9a4778',name:'PR-Bot Enterprise',desc:'Pull Requests automatisch (100 %)',cost:3000,req:'bot2'},
+  {id:'prdir',icon:'📣',bg:'#bc4749',name:'PR-Direktor',desc:'Wählt bei Ereignissen automatisch die beste Option',cost:600},
+  {id:'tax1',icon:'🏛',bg:'#5e548e',name:'Lobbyist',desc:'Steuersatz 25 % → 20 %',cost:300},
+  {id:'tax2',icon:'🏝',bg:'#7a6fb0',name:'Steueroase',desc:'Steuersatz 20 % → 15 %',cost:1500,req:'tax1'},
+  {id:'cpa',icon:'🧾',bg:'#495057',name:'Steuerberater',desc:'Bezahlt Steuerbescheide automatisch',cost:400},
+  {id:'chute',icon:'🪂',bg:'#b08968',name:'Golden Parachute',desc:'Verhindert eine Pfändung durch das Finanzamt',cost:250},
+  {id:'analyst',icon:'🧐',bg:'#335c67',name:'Analyst Relations',desc:'Analysten-Erwartungen steigen 50 % langsamer',cost:800},
+  {id:'tal1',icon:'🧲',bg:'#9c6644',name:'Talent Pipeline',desc:'Einstellungskosten steigen ×1,12 statt ×1,15',cost:400},
+  {id:'tal2',icon:'🧲',bg:'#b07d62',name:'Employer Branding',desc:'Einstellungskosten ×1,09',cost:1500,req:'tal1'},
+  {id:'tal3',icon:'🧲',bg:'#c89f7d',name:'Talent-Magnet',desc:'Einstellungskosten ×1,06',cost:5000,req:'tal2'},
+  {id:'mkt1',icon:'🗺',bg:'#1d3557',name:'Markt: Österreich',desc:'Umsatz ×2',cost:1000},
+  {id:'mkt2',icon:'🇪🇺',bg:'#274c77',name:'Markt: Europa',desc:'Umsatz ×3',cost:3000,req:'mkt1'},
+  {id:'mkt3',icon:'🌏',bg:'#3a6ea5',name:'Markt: Schwellenländer',desc:'Umsatz ×5',cost:8000,req:'mkt2'},
+  {id:'mkt4',icon:'🌍',bg:'#457b9d',name:'Markt: Global',desc:'Umsatz ×10',cost:20000,req:'mkt3'},
+];
+const SUITE={
+  cfo:{name:'CFO',desc:'setzt die Earnings-Guidance automatisch',cost:[25e3,25e4,25e5],lv:['zufällig','trendbasiert','volle Analyse']},
+  cto:{name:'CTO',desc:'kauft Upgrades & Automatisierung',cost:[5e4,5e5,5e6],lv:['billigstes zuerst','beste Rendite','Rendite + Restrukturierung']},
+  coo:{name:'COO',desc:'stellt automatisch Leute ein',cost:[5e4,5e5,5e6],lv:['billigstes zuerst','bester Grenzumsatz','bester Grenzumsatz ×5']},
+};
+const GUIDE={conservative:{g:.05,re:.5,de:'konservativ'},inline:{g:.15,re:1,de:'im Rahmen'},aggressive:{g:.35,re:2,de:'aggressiv'}};
+const COMPANIES=['Alpenblick AG','Donau Data','Krautsoft','Bergwerk IT','NordCloud','Pixelhaus','Strudel Systems','Linz Logistics','Grazer Glas','Kärntner Kraft','Semmering Solar','Wachau Wein','Tirol Telekom','Salzach Software','Mostviertel Media','Vorarlberg Velo'];
+const TASKS=[['ESLint','3 Warnungen in {f}'],['TypeScript','Typfehler in {f}: Eigenschaft „cash“ fehlt'],['Prettier','{f} ist nicht formatiert'],['Git','Branch „feature/{r}“ ist 2 Commits hinter origin'],['npm','2 Pakete sind veraltet'],['Tests','1 Test in {f} schlägt fehl'],['Code Review','Neuer Kommentar zu {f}'],['Spell Checker','„Umsazt“ ist unbekannt ({f})'],['Docker','Container „api“ wurde neu gestartet']];
+const EVENTS=[
+  {t:'🚀 Dein Artikel ist auf Platz 1 bei Hacker News!',c:[['Server hochskalieren (−5 Tage Umsatz)',()=>{pay(days(5));temp(2,60);return 'Umsatz ×2 für 60 Tage';}],['Einfach genießen',()=>{temp(1.3,60);return 'Umsatz ×1,3 für 60 Tage';}]]},
+  {t:'☕ Die Kaffeemaschine ist kaputt. Das Team wird unruhig.',c:[['Siebträger kaufen (−2 Tage)',()=>{pay(days(2));temp(1.1,60);return 'Team motiviert: ×1,1';}],['Wasser ist auch gesund',()=>{temp(.8,45);return 'Produktivität ×0,8 für 45 Tage';}]]},
+  {t:'🧑‍💻 Ein Praktikant hat am Freitag direkt auf main gepusht.',c:[['Rollback (−3 Tage)',()=>{pay(days(3));return 'Alles wieder gut';}],['YOLO, live lassen',()=>{if(Math.random()<.5){gain(days(15));return 'Hat funktioniert! +15 Tage Umsatz';}temp(.5,30);return 'Prod ist down: ×0,5 für 30 Tage';}]]},
+  {t:'📞 Ein Großkunde droht zu kündigen.',c:[['Rabatt anbieten (−8 Tage)',()=>{pay(days(8));temp(1.2,60);return 'Kunde bleibt und empfiehlt dich weiter: ×1,2';}],['Abwarten',()=>{temp(.75,60);return 'Kunde weg: ×0,75 für 60 Tage';}]]},
+  {t:'💼 Ein Business Angel will investieren.',c:[['Annehmen (+20 Tage Umsatz)',()=>{gain(days(20));return '+20 Tage Umsatz';}],['Ablehnen – wir bleiben unabhängig',()=>{temp(1.1,120);return 'Team-Moral ×1,1 für 120 Tage';}]]},
+  {t:'🏆 Dein Team hat einen Hackathon gewonnen!',c:[['Party! (−2 Tage)',()=>{pay(days(2));temp(1.5,60);return 'Umsatz ×1,5 für 60 Tage';}],['Gleich weiterarbeiten',()=>{gain(days(5));return '+5 Tage Umsatz';}]]},
+  {t:'🎤 Einladung als Keynote-Speaker auf einer Konferenz.',c:[['Zusagen (−5 Tage)',()=>{pay(days(5));temp(1.4,90);return 'Neue Kunden: ×1,4 für 90 Tage';}],['Absagen',()=>'Nichts passiert']]},
+  {t:'🇪🇺 Die Datenschutzbehörde kündigt eine DSGVO-Prüfung an.',c:[['Datenschutzbeauftragte holen (−6 Tage)',()=>{pay(days(6));return 'Prüfung bestanden';}],['Wird schon passen',()=>{if(Math.random()<.6)return 'Glück gehabt!';pay(days(25));return 'Strafe: −25 Tage Umsatz';}]]},
+  {t:'🧠 Stack Overflow ist down.',c:[['KI-Assistent abonnieren (−3 Tage)',()=>{pay(days(3));return 'Weiter geht’s';}],['Selbst nachdenken',()=>{temp(.9,60);return 'Langsamer: ×0,9 für 60 Tage';}]]},
+  {t:'🐛 Ein Kunde meldet einen kritischen Bug.',c:[['Hotfix heute Nacht (−4 Tage)',()=>{pay(days(4));temp(1.1,30);return 'Kunde begeistert: ×1,1';}],['Kommt in den nächsten Sprint',()=>{temp(.85,60);return 'Kunden genervt: ×0,85';}]]},
+  {t:'📰 Ein Tech-Blog schreibt einen Verriss über dich.',c:[['Gegendarstellung (−5 Tage)',()=>{pay(days(5));return 'Ruf gerettet';}],['Ignorieren',()=>{temp(.8,60);return 'Imageschaden: ×0,8 für 60 Tage';}]]},
+  {t:'🎁 Ein Open-Source-Projekt von dir geht viral.',c:[['Sponsoren suchen',()=>{gain(days(10));return '+10 Tage Umsatz';}],['Einfach freuen',()=>{temp(1.2,60);return '×1,2 für 60 Tage';}]]},
+  {t:'🌩 Ein Gewitter legt das Büro-WLAN lahm.',c:[['Mobile Hotspots kaufen (−3 Tage)',()=>{pay(days(3));return 'Online bleiben';}],['Alle ins Homeoffice',()=>{if(Math.random()<.5){temp(1.15,45);return 'Homeoffice läuft super: ×1,15';}temp(.7,30);return 'Chaos: ×0,7 für 30 Tage';}]]},
+  {ipo:1,t:'📉 Ein Short-Seller veröffentlicht einen Bericht gegen dich.',c:[['Gegendarstellung (−10 Tage)',()=>{pay(days(10));return 'Aktie stabil';}],['Schweigen',()=>{temp(.7,90);R.noise-=3;return 'Aktie fällt, ×0,7 für 90 Tage';}]]},
+  {ipo:1,t:'🏛️ Du wirst vor einen Parlamentsausschuss geladen.',c:[['Anwaltsteam schicken (−15 Tage)',()=>{pay(days(15));return 'Überstanden';}],['Selbst hingehen',()=>{if(Math.random()<.5){gain(days(30));return 'Souverän! +30 Tage Umsatz';}temp(.6,60);return 'Peinlich: ×0,6 für 60 Tage';}]]},
+  {ipo:1,t:'🏦 Deine Hausbank wackelt bedenklich.',c:[['Geld umschichten (−5 Tage)',()=>{pay(days(5));return 'Geld in Sicherheit';}],['Wird schon gutgehen',()=>{if(Math.random()<.5)return 'Bank gerettet';const l=S.cash*.2;S.cash-=l;return 'Bank pleite: −'+money(l);}]]},
+  {ipo:1,t:'🦠 Eine Pandemie schickt alle ins Homeoffice.',c:[['Remote-Infrastruktur (−10 Tage)',()=>{pay(days(10));temp(1.2,90);return 'Remote boomt: ×1,2';}],['Durchhalten',()=>{temp(.6,60);return '×0,6 für 60 Tage';}]]},
+];
+const CRISES=[
+  {id:'hang',title:'Fenster reagiert nicht',mult:0,dur:15,fix:'Fenster neu laden',fixDays:8},
+  {id:'npm',title:'npm install hängt',mult:.3,dur:20,fix:'node_modules löschen',fixDays:5},
+  {id:'merge',title:'Merge-Konflikt in main',mult:0,dur:40,fix:null},
+  {id:'ransom',title:'Ransomware',mult:0,dur:30,fix:'Lösegeld zahlen (15 % Cash)',fixPct:.15},
+  {id:'bsod',title:'Systemabsturz',mult:0,dur:12,fix:null},
+  {id:'ddos',title:'DDoS-Angriff',mult:.5,dur:30,fix:'CDN-Schutz aktivieren',fixDays:8},
+];
+const BOSS_PY=`# Hausübung 4 – Notenverwaltung
+# Informatik, 3. Jahrgang
+# Abgabe: Freitag
+
+from statistics import mean
+
+
+class Schueler:
+    """Speichert Name und Noten eines Schülers."""
+
+    def __init__(self, name, noten=None):
+        self.name = name
+        self.noten = noten if noten is not None else []
+
+    def note_hinzufuegen(self, note):
+        if note < 1 or note > 5:
+            raise ValueError("Note muss zwischen 1 und 5 liegen")
+        self.noten.append(note)
+
+    def durchschnitt(self):
+        if len(self.noten) == 0:
+            return None
+        return round(mean(self.noten), 2)
+
+    def ist_positiv(self):
+        return all(n < 5 for n in self.noten)
+
+
+def beste_schueler(klasse):
+    mit_noten = [s for s in klasse if s.durchschnitt() is not None]
+    return min(mit_noten, key=lambda s: s.durchschnitt())
+
+
+def bericht(klasse):
+    for s in sorted(klasse, key=lambda s: s.name):
+        status = "positiv" if s.ist_positiv() else "negativ"
+        print(f"{s.name:<12} {s.durchschnitt():>5}  {status}")
+
+
+if __name__ == "__main__":
+    klasse = [
+        Schueler("Anna", [1, 2, 1, 2]),
+        Schueler("Ben", [3, 2, 4, 3]),
+        Schueler("Clara", [2, 2, 1, 3]),
+        Schueler("David", [4, 5, 3, 4]),
+    ]
+    bericht(klasse)
+    besten = beste_schueler(klasse)
+    print(f"Bester Durchschnitt: {besten.name} ({besten.durchschnitt()})")
+`;
+
+/* ================= HELPERS ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const SUF=['','K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
+function fmt(n){if(!isFinite(n))return '∞';const neg=n<0;n=Math.abs(n);let s;
+  if(n<1000)s=n.toFixed(2);else{const i=Math.floor(Math.log10(n)/3);s=i>=SUF.length?n.toExponential(2):(n/Math.pow(1000,i)).toFixed(2)+SUF[i];}
+  return (neg?'-':'')+s;}
+const money=n=>(n<0?'-$':'$')+fmt(Math.abs(n));
+const int=n=>n<1e4?String(Math.floor(n)):fmt(n);
+const sp=(c,t)=>`<span class="${c}">${t}</span>`;
+const K=t=>sp('k',t),K2=t=>sp('k2',t),S_=t=>sp('s',esc(t)),N=t=>sp('n',t),C=t=>sp('cm',esc(t)),F=t=>sp('f',t),T=t=>sp('t',t),V=t=>sp('v',t),P=t=>sp('p',esc(t));
+const Vv=(key,cls='n')=>`<span class="${cls}" data-v="${key}"></span>`;
+const A=(act,vkey,enkey,label)=>`<a data-a="${act}"${enkey?` data-en="${enkey}"`:''}>${vkey?`<span data-v="${vkey}"></span>`:label}</a>`;
+const lens=items=>items.join('<span class="sep">|</span>');
+
+/* ================= STATE ================= */
+function newState(){return{
+  v:1,cash:0,total:0,day:0,speed:1,paused:false,
+  depts:DEPTS.map((d,i)=>({staff:i===0?1:0,lvl:0,auto:false,star:0,pending:0,focus:0,focusT:0,bt:1,unlocked:i===0})),
+  re:0,reTotal:0,streak:0,lastQRev:0,history:[],
+  q:{n:1,guidance:'inline',target:11.5,actual:0,base:10,overtime:0},
+  taxes:{bills:[],quarterRev:0,capex:[0,0,0,0],curCapex:0,n:0,lastDep:0},
+  seriesA:{offered:false,done:false},ipo:false,stock:[],
+  suite:{cfo:0,cto:0,coo:0,ctoPct:30,cooPct:30},
+  ext:{},growth:0,parachuteUsed:false,garnish:false,
+  stats:{hires:1,upgrades:0,autos:0,ctoBuys:0,cooHires:0,deals:0,tasks:0,taxesPaid:0,beats:0,misses:0,commits:0,overtime:0,golden:0,events:0},
+  opts:{theme:'dark',eventFreq:1,deals:true,tasks:true,golden:true,crises:true,fx:true},
+  temp:[],taskStreak:0,prN:100,lastSave:Date.now(),started:Date.now()
+};}
+let S=newState();
+const R={last:performance.now(),ui:0,saveT:0,gm:1,golden:null,nextGolden:40,nextDeal:90,nextTask:30,crisis:null,ctoT:0,cooT:0,
+  view:'company',tabs:['company','finance','readme'],side:'explorer',panel:'term',boss:false,notifs:[],noise:0,mx:innerWidth/2,my:innerHeight/2,keys:{}};
+
+const SAVE_KEY='firma-ide-save-v1';
+function save(manual){try{S.lastSave=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(S));if(manual){toast('💾','Gespeichert.');log('Spielstand gespeichert.','info');}}catch(e){if(manual)toast('⊗','Speichern fehlgeschlagen: '+e.message);}}
+function migrate(o){const b=newState();for(const k in o){if(k in b&&typeof b[k]==='object'&&b[k]&&!Array.isArray(b[k]))b[k]=Object.assign(b[k],o[k]);else b[k]=o[k];}
+  b.depts=DEPTS.map((d,i)=>Object.assign(newState().depts[i],(o.depts||[])[i]||{}));return b;}
+function load(){try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return false;S=migrate(JSON.parse(raw));return true;}catch(e){return false;}}
+function hash(str){let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;return h.toString(16);}
+
+/* ================= ECONOMY ================= */
+function hireScale(){return S.ext.tal3?1.06:S.ext.tal2?1.09:S.ext.tal1?1.12:1.15;}
+function hireCost(i,k=0){return DEPTS[i].cost*Math.pow(hireScale(),S.depts[i].staff+k);}
+function hireBulk(i,n){const h=hireScale(),c=hireCost(i);return c*(Math.pow(h,n)-1)/(h-1);}
+function maxHire(i){const h=hireScale(),c=hireCost(i);if(S.cash<c)return 0;return Math.max(0,Math.floor(Math.log(S.cash*(h-1)/c+1)/Math.log(h)));}
+function upCost(i){return DEPTS[i].cost*15*Math.pow(3,S.depts[i].lvl);}
+function autoCost(i){return DEPTS[i].cost*40;}
+function starCost(i){return DEPTS[i].cost*1e6*Math.pow(1000,S.depts[i].star);}
+function globalMult(noTemp){let m=1;
+  m*=S.ext.mult3?1.5:S.ext.mult2?1.25:S.ext.mult1?1.1:1;
+  m*=1+.02*S.growth;
+  if(S.ext.mkt1)m*=2;if(S.ext.mkt2)m*=3;if(S.ext.mkt3)m*=5;if(S.ext.mkt4)m*=10;
+  if(S.garnish)m*=.85;
+  if(!noTemp){for(const t of S.temp)m*=t.mult;if(R.crisis)m*=R.crisis.mult;}
+  return m;}
+function deptRate(i,gm=R.gm){const d=S.depts[i],D=DEPTS[i];if(!d.unlocked||!d.staff)return 0;
+  return d.staff*D.rev*(1+.5*d.lvl)*Math.pow(10,d.star)*(1+.25*d.focus)*d.bt*gm;}
+function totalRate(){let s=0;for(let i=0;i<DEPTS.length;i++)s+=deptRate(i);return s;}
+function baseRate(){const gm=globalMult(true)/(S.garnish?.85:1);let s=0;for(let i=0;i<DEPTS.length;i++){const d=S.depts[i];if(d.unlocked&&d.staff)s+=d.staff*DEPTS[i].rev*(1+.5*d.lvl)*Math.pow(10,d.star)*d.bt*gm;}return Math.max(s,1);}
+const days=n=>baseRate()*n;
+function gain(x){S.cash+=x;S.total+=x;S.q.actual+=x;S.taxes.quarterRev+=x;}
+function spend(x,capex=true){S.cash-=x;if(capex)S.taxes.curCapex+=x;}
+function pay(x){spend(Math.min(Math.max(x,0),S.cash),false);}
+function temp(mult,dur){S.temp.push({mult,until:S.day+dur});}
+function taxRate(){return S.ext.tax2?.15:S.ext.tax1?.2:.25;}
+function annualRev(){return totalRate()*365;}
+function freeCash(){const open=S.taxes.bills.reduce((a,b)=>a+b.amt,0);return Math.max(0,S.cash-open-S.taxes.quarterRev*taxRate());}
+function streakMult(){return 1+.1*Math.min(Math.max(S.streak,0),10);}
+function streakIcon(){const s=S.streak;if(s>=8)return '👑';if(s>=5)return '🚀';if(s>=3)return '🔥';if(s>=1)return '✅';if(s<=-3)return '💀';if(s==-2)return '😰';if(s==-1)return '😬';return '—';}
+function valuation(){return S.cash+annualRev()*stockMultiple();}
+function stockMultiple(){return Math.max(2,12+1.5*Math.max(-4,Math.min(S.streak,10))+R.noise);}
+function seriesAAmount(){return Math.max(25e4,baseRate()*100);}
+function ipoReady(){return S.seriesA.done&&!S.ipo&&annualRev()>=25e6;}
+function qDay(){return Math.floor(S.day%90)+1;}
+function guidanceLocked(){return (S.day%90)>10;}
+function qLabel(n=S.q.n){return `Q${(n-1)%4+1} FY${2026+Math.floor((n-1)/4)}`;}
+function computeTarget(){const p=Math.max(0,S.streak)*.02*(S.ext.analyst?.5:1);S.q.target=S.q.base*(1+GUIDE[S.q.guidance].g+p);}
+
+/* ================= ACTIONS ================= */
+function float(txt,col){if(!S.opts.fx)return;const e=document.createElement('div');e.className='float';e.textContent=txt;e.style.left=(R.mx+8)+'px';e.style.top=(R.my-14)+'px';if(col)e.style.color=col;document.body.appendChild(e);setTimeout(()=>e.remove(),1100);}
+function blocked(){return !!R.crisis&&!R.boss;}
+function hire(i,n=1){if(n<1)return;const c=hireBulk(i,n);if(S.cash<c)return false;spend(c);S.depts[i].staff+=n;S.stats.hires+=n;return c;}
+function upgrade(i){const c=upCost(i);if(S.cash<c)return false;spend(c);S.depts[i].lvl++;S.stats.upgrades++;return c;}
+function automate(i){const d=S.depts[i];if(d.auto)return false;const c=autoCost(i);if(S.cash<c)return false;spend(c);gain(d.pending);d.pending=0;d.auto=true;S.stats.autos++;return c;}
+function restructure(i){const d=S.depts[i];if(!S.ipo||!d.auto)return false;const c=starCost(i);if(S.cash<c)return false;spend(c);d.star++;return c;}
+function commit(i){const d=S.depts[i];if(d.pending<=0)return 0;const x=d.pending;gain(x);d.pending=0;S.stats.commits++;return x;}
+function commitAll(){let t=0;S.depts.forEach((d,i)=>t+=commit(i));if(t>0){float('+'+money(t));log(`[main ${hash(String(S.day)).slice(0,7)}] Umsatz committet: +${money(t)}`,'ok');}return t;}
+function overtimeGain(){return days(5)/(1+.18*S.q.overtime);}
+function overtime(){const g=overtimeGain();gain(g);S.q.overtime++;S.stats.overtime++;float('+'+money(g));log(`> npm run overtime\n  ✓ Crunch-Time erledigt: +${money(g)} (Effizienz ${Math.round(100/(1+.18*(S.q.overtime-1)))} %)`,'ok');}
+function focus(i){const d=S.depts[i];d.focus=Math.min(8,d.focus+1);d.focusT=S.day;float('⚡ ×'+(1+.25*d.focus).toFixed(2),'#e5c07b');}
+function collectGolden(i){if(!R.golden||R.golden.i!==i)return;const g=Math.max(10,days(20));gain(g);R.golden=null;S.stats.golden++;float('💡 +'+money(g),'#e5c07b');log(`💡 Quick-Fix übernommen: +${money(g)}`,'gold');}
+function buyExt(id){const e=EXT.find(x=>x.id===id);if(!e)return;const c=extCost(e);if(S.re<c||(!e.repeat&&S.ext[id]))return;if(e.req&&!S.ext[e.req])return;S.re-=c;if(e.repeat)S.growth++;else S.ext[id]=true;log(`Erweiterung installiert: ${e.name}`,'info');toast('🧩',`<b>${e.name}</b> wurde installiert.`);}
+function extCost(e){return e.repeat?Math.ceil(25*Math.pow(1.1,S.growth)):e.cost;}
+function hireSuite(r){const lv=S.suite[r];if(lv>=3||!S.seriesA.done)return;const c=SUITE[r].cost[lv];if(S.cash<c)return;spend(c);S.suite[r]++;log(`${SUITE[r].name} jetzt auf Level ${S.suite[r]} (${SUITE[r].lv[lv]})`,'info');}
+function setGuidance(g){if(guidanceLocked())return;S.q.guidance=g;computeTarget();}
+function acceptSeriesA(){if(S.seriesA.done)return;if(R.saN&&R.saN.el.isConnected)closeNotif(R.saN);const a=seriesAAmount();S.seriesA.done=true;S.seriesA.offered=true;S.cash+=a;log(`💰 Series A abgeschlossen: +${money(a)}. team.yaml ist jetzt freigeschaltet.`,'ok');toast('💰',`Series A: <b>+${money(a)}</b>. Die C-Suite (team.yaml) ist freigeschaltet.`);confetti();openTab('team');}
+function doIPO(){if(!ipoReady())return;const a=annualRev()*.3;S.ipo=true;S.cash+=a;R.noise=0;log(`🔔 Börsengang! Ticker FIRMA. Emissionserlös: +${money(a)}`,'ok');toast('🔔',`<b>IPO geschafft!</b> Emissionserlös ${money(a)}. Restrukturierung (★) freigeschaltet, RE ×2.`);confetti();}
+function payBill(id){const b=S.taxes.bills.find(x=>x.id===id);if(!b||S.cash<b.amt)return;S.cash-=b.amt;S.stats.taxesPaid+=b.amt;S.taxes.bills=S.taxes.bills.filter(x=>x!==b);S.garnish=S.taxes.bills.some(x=>x.age>=30);log(`Steuerbescheid #${b.id} bezahlt (${money(b.amt)})`,'info');}
+
+/* ================= GAME LOOP ================= */
+function tick(dt){
+  R.gm=globalMult();
+  let earned=0;
+  for(let i=0;i<DEPTS.length;i++){const d=S.depts[i];if(!d.unlocked||!d.staff)continue;const r=deptRate(i);
+    if(d.auto||S.ext.hook)earned+=r*dt;else d.pending=Math.min(d.pending+r*dt,Math.max(r,deptRate(i,1))*120);}
+  if(earned)gain(earned);
+  const prev=S.day;S.day+=dt;
+  for(const d of S.depts)if(d.focus>0&&S.day-d.focusT>=20){d.focus--;d.focusT=S.day;}
+  if(S.temp.length)S.temp=S.temp.filter(t=>t.until>S.day);
+  if(R.crisis&&S.day>=R.crisis.until)endCrisis(false);
+  S.depts.forEach((d,i)=>{if(!d.unlocked&&S.total>=DEPTS[i].unlock){d.unlocked=true;log(`Neue Datei: departments/${DEPTS[i].file}`,'info');toast('📄',`<b>${DEPTS[i].name}</b> freigeschaltet – neue Datei <b>${DEPTS[i].file}</b>.`);}});
+  for(let k=Math.floor(prev)+1;k<=Math.floor(S.day);k++)daily(k);
+  if(!R.boss){
+    if(R.golden&&S.day>R.golden.until)R.golden=null;
+    if(S.day>=R.nextGolden){R.nextGolden=S.day+rnd(45,120);if(S.opts.golden&&!R.golden){const ok=S.depts.map((d,i)=>d.unlocked&&d.staff?i:-1).filter(i=>i>=0);if(ok.length)R.golden={i:pick(ok),until:S.day+8};}}
+    if(S.day>=R.nextDeal){R.nextDeal=S.day+rnd(60,240);if(S.opts.deals&&S.total>200)spawnDeal();}
+    if(S.day>=R.nextTask){R.nextTask=S.day+rnd(25,60);if(S.opts.tasks&&S.total>30)spawnTask();}
+  }
+  if(S.suite.cto){R.ctoT+=dt;if(R.ctoT>=[0,4,2,1][S.suite.cto]){R.ctoT=0;ctoAct();}}
+  if(S.suite.coo){R.cooT+=dt;if(R.cooT>=[0,4,2,1][S.suite.coo]){R.cooT=0;cooAct();}}
+}
+function daily(k){
+  // taxes
+  for(const b of S.taxes.bills){b.age++;b.amt*=1.01;
+    if(b.age===15){log(`⚠ 2. Mahnung: Steuerbescheid #${b.id} (${money(b.amt)})`,'warn');toast('🧾','<b>2. Mahnung</b> vom Finanzamt. Ab Tag 30 wird dein Umsatz gepfändet (−15 %).',{urgent:1});}
+    if(b.age===30){log(`⊗ Lohnpfändung aktiv: −15 % Umsatz bis Bescheid #${b.id} bezahlt ist`,'err');toast('⊗','<b>Pfändung!</b> −15 % Umsatz, bis die Steuern bezahlt sind.',{urgent:1});}
+  }
+  const seize=S.taxes.bills.filter(b=>b.age>=60);
+  for(const b of seize){S.taxes.bills=S.taxes.bills.filter(x=>x!==b);
+    if(S.ext.chute&&!S.parachuteUsed){S.parachuteUsed=true;log(`🪂 Golden Parachute verhindert Pfändung von Bescheid #${b.id}`,'warn');}
+    else{const l=Math.min(S.cash,b.amt*1.5);S.cash-=l;log(`⊗ Kontopfändung: −${money(l)} (Bescheid #${b.id})`,'err');toast('⊗',`<b>Kontopfändung:</b> Das Finanzamt hat ${money(l)} eingezogen.`,{urgent:1});}}
+  if(S.ext.cpa)for(const b of [...S.taxes.bills])if(S.cash>=b.amt)payBill(b.id);
+  S.garnish=S.taxes.bills.some(x=>x.age>=30);
+  if(k%90===45)taxBill();
+  if(k%90===0)endQuarter();
+  if(!S.seriesA.offered&&S.total>=1e5){S.seriesA.offered=true;offerSeriesA();}
+  if(S.ipo){S.stock.push(valuation()/1e8);if(S.stock.length>60)S.stock.shift();R.noise+=rnd(-.4,.4);R.noise*=.97;}
+  if(!R.boss){
+    const f=S.opts.eventFreq;
+    if(f>0&&k>20&&Math.random()<f/90)randomEvent();
+    if(S.opts.crises&&f>0&&S.total>5000&&!R.crisis&&Math.random()<f/260)startCrisis(pick(CRISES));
+    const active=S.depts.filter(d=>d.unlocked&&d.staff).length;
+    if(active>=2&&Math.random()<1/1200)breakthrough();
+  }
+}
+function taxBill(){const qr=S.taxes.quarterRev;S.taxes.capex.shift();S.taxes.capex.push(S.taxes.curCapex);S.taxes.curCapex=0;
+  const dep=S.taxes.capex.reduce((a,b)=>a+b,0)/4;S.taxes.lastDep=dep;S.taxes.quarterRev=0;
+  const amt=Math.max(taxRate()*(qr-dep),.15*qr);if(amt<.01)return;
+  const b={id:++S.taxes.n,amt,orig:amt,age:0};S.taxes.bills.push(b);
+  log(`🧾 Steuerbescheid #${b.id}: ${money(amt)} (Umsatz ${money(qr)}, Abschreibung ${money(dep)})`,'warn');
+  if(S.ext.cpa&&S.cash>=amt){payBill(b.id);return;}
+  if(!R.boss)notify({icon:'🧾',title:'Finanzamt:',msg:`Steuerbescheid #${b.id} über <b>${money(amt)}</b>. Unbezahlt: 1 % Zinsen pro Tag.`,buttons:[{label:'Bezahlen',pri:1,fn:()=>{if(S.cash<b.amt){toast('⊗','Nicht genug Cash.');return false;}payBill(b.id);}},{label:'Später'}]});
+}
+function endQuarter(){
+  const a=S.q.actual,t=S.q.target,beat=a>=t;let re=0;
+  if(beat){S.streak=S.streak>0?S.streak+1:1;re=Math.max(1,Math.floor(Math.sqrt(a)/4*GUIDE[S.q.guidance].re*streakMult()*(S.ipo?2:1)));S.re+=re;S.reTotal+=re;S.stats.beats++;
+    log(`📊 ${qLabel()} Earnings BEAT ${streakIcon()}  Umsatz ${money(a)} vs. Ziel ${money(t)}  → +${re} RE`,'ok');
+    if(!R.boss){toast(streakIcon(),`<b>${qLabel()}: Erwartungen übertroffen!</b> ${money(a)} statt ${money(t)}. <b>+${re} RE</b> für den Extensions-Marktplatz.`);confetti();}
+    if(S.ipo)R.noise+=1;
+  }else{S.streak=S.streak<0?S.streak-1:-1;S.stats.misses++;
+    log(`📊 ${qLabel()} Earnings MISS ${streakIcon()}  Umsatz ${money(a)} vs. Ziel ${money(t)}`,'err');
+    if(!R.boss)toast(streakIcon(),`<b>${qLabel()}: Ziel verfehlt.</b> ${money(a)} von ${money(t)}. Tipp: konservativere Guidance wählen.`);
+    if(S.ipo)R.noise-=2;
+  }
+  S.history.push({q:qLabel(),t,a,beat,re});if(S.history.length>12)S.history.shift();
+  news(`${qLabel()}: Firma ${beat?'übertrifft':'verfehlt'} Erwartungen – Umsatz ${money(a)} (Ziel ${money(t)})`);
+  S.lastQRev=a;S.q.n++;S.q.actual=0;S.q.overtime=0;S.q.base=Math.max(a,10);
+  if(S.suite.cfo)cfoAct();
+  computeTarget();
+}
+function cfoAct(){const lv=S.suite.cfo,p=Math.max(0,S.streak)*.02*(S.ext.analyst?.5:1);
+  if(lv===1){S.q.guidance=pick(Object.keys(GUIDE));}
+  else{const proj=totalRate()*90*(lv===3?1.1:1),margin=lv===3?1:1.05;let g='conservative';
+    for(const k of ['inline','aggressive'])if(S.q.base*(1+GUIDE[k].g+p)*margin<=proj)g=k;S.q.guidance=g;}
+  log(`[CFO] Guidance für ${qLabel()}: ${GUIDE[S.q.guidance].de}`,'info');}
+function ctoAct(){let budget=freeCash()*S.suite.ctoPct/100;const lv=S.suite.cto;
+  for(let k=0;k<(lv===3?3:1);k++){const o=[];
+    S.depts.forEach((d,i)=>{if(!d.unlocked||!d.staff)return;const r=deptRate(i);
+      o.push({i,t:'up',c:upCost(i),g:r*.5/(1+.5*d.lvl)});
+      if(!d.auto&&!S.ext.hook)o.push({i,t:'auto',c:autoCost(i),g:r*.6});
+      if(lv>=3&&S.ipo&&d.auto)o.push({i,t:'star',c:starCost(i),g:r*9});});
+    const af=o.filter(x=>x.c<=budget&&x.c<=S.cash);if(!af.length)break;
+    const p=lv===1?af.sort((a,b)=>a.c-b.c)[0]:af.sort((a,b)=>b.g/b.c-a.g/a.c)[0];
+    ({up:upgrade,auto:automate,star:restructure})[p.t](p.i);budget-=p.c;S.stats.ctoBuys++;
+    log(`[CTO] ${({up:'Upgrade',auto:'Automatisierung',star:'Restrukturierung'})[p.t]} ${DEPTS[p.i].id} (${money(p.c)})`,'tg');}}
+function cooAct(){let budget=freeCash()*S.suite.cooPct/100;const lv=S.suite.coo;
+  for(let k=0;k<(lv===3?5:1);k++){const o=[];
+    S.depts.forEach((d,i)=>{if(!d.unlocked)return;const c=hireCost(i);const per=DEPTS[i].rev*(1+.5*d.lvl)*Math.pow(10,d.star)*d.bt;o.push({i,c,g:per});});
+    const af=o.filter(x=>x.c<=budget&&x.c<=S.cash);if(!af.length)break;
+    const p=lv===1?af.sort((a,b)=>a.c-b.c)[0]:af.sort((a,b)=>b.g/b.c-a.g/a.c)[0];
+    hire(p.i,1);budget-=p.c;S.stats.cooHires++;
+    log(`[COO] Neue:r Mitarbeiter:in in ${DEPTS[p.i].id} (${money(p.c)})`,'tg');}}
+
+/* ================= EVENTS ================= */
+function spawnDeal(){const reward=days(rnd(30,60)),co=pick(COMPANIES),bot=S.ext.bot3?1:S.ext.bot2?.75:S.ext.bot1?.5:0;S.prN++;
+  if(bot){gain(reward*bot);S.stats.deals++;log(`🤖 PR-Bot hat PR #${S.prN} (${co}) gemerged: +${money(reward*bot)}`,'ok');return;}
+  const need=5+Math.floor(Math.random()*5);let c=0;
+  notify({icon:'⑂',title:`Pull Request #${S.prN}:`,msg:`Enterprise-Vertrag mit <b>${co}</b> wartet auf Review (${money(reward)}). Schnell approven!`,time:12,
+    buttons:[{label:`✍️ Approve (0/${need})`,pri:1,keep:1,fn:(n,btn)=>{c++;btn.textContent=`✍️ Approve (${c}/${need})`;if(c>=need){gain(reward);S.stats.deals++;float('+'+money(reward));log(`⑂ PR #${S.prN} gemerged – Vertrag mit ${co}: +${money(reward)}`,'ok');closeNotif(n);}}}]});}
+function spawnTask(){const fix=S.ext.cop3?1:S.ext.cop2?.75:S.ext.cop1?.5:0;
+  const files=S.depts.filter(d=>d.unlocked).map((d,i)=>DEPTS[i].file).concat(['company.ts','finance.ts']);
+  const [src,m]=pick(TASKS),msg=m.replace('{f}',pick(files)).replace('{r}',pick(['login','dark-mode','checkout','api-v2','refactor']));
+  if(fix){const g=days(3)*fix;gain(g);S.stats.tasks++;log(`🔧 Auto-Fixer: ${src} – ${msg} (+${money(g)})`,'tg');return;}
+  notify({icon:'ⓘ',title:src+':',msg:esc(msg),time:10,buttons:[{label:'💡 Quick Fix',pri:1,fn:()=>{S.taskStreak++;const s=S.taskStreak,m2=s>=10?3:s>=5?2:s>=3?1.5:1;const g=days(3)*m2;gain(g);S.stats.tasks++;float(`+${money(g)}${m2>1?' ×'+m2:''}`);}}],
+    onTimeout:()=>{S.taskStreak=0;}});}
+function randomEvent(){const pool=EVENTS.filter(e=>!e.ipo||S.ipo);const e=pick(pool);S.stats.events++;
+  const run=(i)=>{const r=e.c[i][1]();log(`${e.t} → ${e.c[i][0]}: ${r}`,'info');toast('ⓘ',esc(r));};
+  if(S.ext.prdir){run(0);return;}
+  notify({icon:'❗',title:'',msg:e.t,time:10,urgent:1,buttons:e.c.map((c,i)=>({label:c[0],pri:i===0,fn:()=>run(i)})),onTimeout:()=>run(e.c.length-1)});}
+function breakthrough(){const ok=S.depts.map((d,i)=>d.unlocked&&d.staff?i:-1).filter(i=>i>=0);const i=pick(ok);S.depts[i].bt*=2;
+  log(`🔬 F&E-Durchbruch: ${DEPTS[i].name} macht dauerhaft ×${S.depts[i].bt} Umsatz`,'gold');toast('🔬',`<b>F&E-Durchbruch!</b> ${DEPTS[i].name} macht ab sofort dauerhaft doppelt so viel Umsatz.`);}
+function offerSeriesA(){const a=seriesAAmount();log(`✉ Neue E-Mail: Series-A-Angebot über ${money(a)}`,'info');
+  R.saN=notify({icon:'✉',title:'E-Mail von Alpine Ventures:',msg:`„Wir würden gerne <b>${money(a)}</b> in deine Firma investieren (Series A).“ Danach kannst du eine C-Suite einstellen.`,buttons:[{label:'Annehmen',pri:1,fn:acceptSeriesA},{label:'Später (finance.ts)'}]});}
+function news(t){const o=$('#p-out');const d=document.createElement('div');d.className='tl';d.innerHTML=`<span class="tg">[Earnings-News ${new Date().toLocaleTimeString('de-AT')}]</span> ${esc(t)}`;o.appendChild(d);while(o.children.length>100)o.firstChild.remove();}
+
+/* ================= CRISES ================= */
+function startCrisis(c){R.crisis=Object.assign({},c,{until:S.day+c.dur,start:S.day});log(`⊗ ${c.title}!`,'err');buildCrisis();}
+function endCrisis(fixed){if(!R.crisis)return;log(`✓ ${R.crisis.title} ${fixed?'behoben':'vorbei'}.`,'ok');R.crisis=null;$('#crisis').className='';$('#crisis').innerHTML='';}
+function fixCrisis(){const c=R.crisis;if(!c)return;let cost=c.fixPct?S.cash*c.fixPct:c.fixDays?days(c.fixDays):0;if(S.cash<cost){toast('⊗','Nicht genug Cash.');return;}pay(cost);endCrisis(true);}
+function buildCrisis(){const c=R.crisis,el=$('#crisis');el.className='on';
+  const cost=c.fixPct?'15 % deines Cash':c.fixDays?money(days(c.fixDays)):'';
+  const fixBtn=c.fix?`<button class="mini" data-a="fixcrisis">${c.fix} (${cost})</button>`:'';
+  let h='';
+  if(c.id==='hang')h=`<div class="cr-hang"><div class="cr-box"><h3>„firma“ reagiert nicht</h3><p>Das Fenster reagiert nicht mehr. Du kannst warten (noch <span data-v="crLeft"></span> Tage) oder das Fenster neu laden.</p><div class="bt"><button class="mini" style="background:var(--btn2);color:var(--fg)">Warten</button>${fixBtn}</div></div></div>`;
+  if(c.id==='bsod')h=`<div class="cr-bsod"><div class="face">:(</div><p>Auf deinem PC ist ein Problem aufgetreten. Er muss neu gestartet werden. Es werden einige Fehlerinformationen gesammelt, danach wird automatisch neu gestartet.</p><p><span data-v="crPct"></span> % abgeschlossen</p><p style="font-size:13px;opacity:.8">Stoppcode: CRITICAL_QUARTER_CLOSE_FAILURE</p></div>`;
+  if(c.id==='ransom')h=`<div class="cr-ransom"><div class="lock">🔒</div><h2>DEINE DATEIEN WURDEN VERSCHLÜSSELT</h2><div>Alle Abteilungen sind gesperrt. Entschlüsselung in <span data-v="crLeft"></span> Tagen – oder sofort gegen Lösegeld.</div><div style="margin-top:12px">${fixBtn}</div></div>`;
+  if(c.id==='ddos')h=`<div class="cr-ddos"><div style="font-size:42px">☹</div><h2>Diese Website ist nicht erreichbar</h2><div>firma.at hat zu lange gebraucht, um zu antworten. Umsatz −50 % für noch <span data-v="crLeft"></span> Tage.</div><div class="code">ERR_CONNECTION_TIMED_OUT</div><button data-a="noop">Neu laden</button>${c.fix?`<button data-a="fixcrisis">${c.fix} (${cost})</button>`:''}</div>`;
+  if(c.id==='npm')h=`<div class="cr-term"><div>PS C:\\Users\\schueler\\firma&gt; npm install</div><div>npm <span style="color:#e5c07b">WARN</span> deprecated left-pad@1.3.0</div><div>npm <span style="color:#e5c07b">WARN</span> deprecated request@2.88.2</div><div>⠼ idealTree: <span data-v="crSpin"></span></div><div style="margin-top:8px;color:#888">Umsatz −70 %, noch <span data-v="crLeft"></span> Tage …</div><div style="margin-top:12px">${fixBtn}</div></div>`;
+  if(c.id==='merge'){const ln=(n,t,cls='')=>`<div class="ln ${cls}"><span class="g">${n}</span><span class="c">${t}</span></div>`;
+    h=`<div class="cr-merge">${ln(1,C('// company.ts'))}${ln(2,`${K('export const')} ${V('ledger')} = ${P('{')}`)}<div class="ln lens"><span class="g"></span><span class="c"><span class="ind">  </span>${lens([`<a data-a="fixmerge">Aktuelle Änderung annehmen</a>`,`<a data-a="fixmerge">Eingehende Änderung annehmen</a>`,`<a data-a="fixmerge">Beide Änderungen annehmen</a>`,`<a data-a="fixmerge">Änderungen vergleichen</a>`])}</span></div>${ln(3,sp('mk','&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD (Aktuelle Änderung)'),'cur')}${ln(4,`  ${V('cash')}: ${S_('"$'+fmt(S.cash)+'"')},`,'cur')}${ln(5,sp('mk','======='))}${ln(6,`  ${V('cash')}: ${S_('"$0.00"')}, ${C('// praktikant war hier')}`,'inc')}${ln(7,sp('mk','&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/praktikant (Eingehende Änderung)'),'inc')}${ln(8,P('};'))}${ln(9,'')}${ln(10,C('// ⚠ Merge-Konflikt: Alle Abteilungen pausiert. Löse den Konflikt über die Links oben.'))}</div>`;}
+  el.innerHTML=h;rebind();}
+
+/* ================= NOTIFICATIONS ================= */
+function notify(o){const el=document.createElement('div');el.className='notif'+(o.urgent?' urgent':'');
+  el.innerHTML=`<div class="nh"><span class="ni">${o.icon||'ⓘ'}</span><div class="nm">${o.title?`<b>${o.title}</b> `:''}${o.msg||''}</div><span class="nx" title="Schließen">✕</span></div><div class="nb"></div>${o.time&&!o.quiet?'<div class="nt"><i></i></div>':''}`;
+  const nb=el.querySelector('.nb');
+  (o.buttons||[]).forEach(b=>{const bt=document.createElement('button');bt.textContent=b.label;if(b.pri)bt.className='pri';
+    bt.onclick=e=>{e.stopPropagation();const r=b.fn?b.fn(o,bt):undefined;if(!b.keep&&r!==false)closeNotif(o);render(true);};nb.appendChild(bt);});
+  el.querySelector('.nx').onclick=()=>{if(o.onTimeout)o.onTimeout();closeNotif(o);};
+  o.el=el;o.left=o.time;o.bar=el.querySelector('.nt i');R.notifs.push(o);$('#notifs').appendChild(el);
+  const quiet=R.notifs.filter(n=>n.quiet);while(R.notifs.length>4&&quiet.length){closeNotif(quiet.shift());}
+  while(R.notifs.length>5){const old=R.notifs.find(n=>n.time&&n!==o)||R.notifs[0];closeNotif(old);if(old.onTimeout)setTimeout(old.onTimeout,0);}
+  return o;}
+function closeNotif(o){o.el.remove();R.notifs=R.notifs.filter(n=>n!==o);}
+function toast(icon,msg,opt={}){return notify({icon,msg,time:opt.urgent?7:5,quiet:1,urgent:opt.urgent});}
+function tickNotifs(rdt){for(const o of [...R.notifs]){if(!o.time)continue;o.left-=rdt;if(o.bar)o.bar.style.width=Math.max(0,o.left/o.time*100)+'%';if(o.left<=0){if(o.onTimeout)o.onTimeout();closeNotif(o);}}}
+function confetti(){if(!S.opts.fx)return;const cols=['#f14c4c','#89d185','#3794ff','#e5c07b','#c586c0','#4ec9b0'];
+  for(let i=0;i<50;i++){const c=document.createElement('div');c.className='conf';c.style.left=rnd(0,100)+'vw';c.style.background=pick(cols);c.style.animationDuration=rnd(1.4,2.8)+'s';c.style.animationDelay=rnd(0,.4)+'s';document.body.appendChild(c);setTimeout(()=>c.remove(),3400);}}
+
+/* ================= TERMINAL ================= */
+function log(t,cls=''){const d=document.createElement('div');d.className='tl '+cls;d.textContent=t;const L=$('#tlog');L.appendChild(d);while(L.children.length>250)L.firstChild.remove();
+  if(R.panel==='term'){const pb=$('#pbody');if(pb.scrollHeight-pb.scrollTop-pb.clientHeight<80)pb.scrollTop=pb.scrollHeight;}}
+function findDept(s){if(!s)return -1;s=s.toLowerCase();return DEPTS.findIndex((D,i)=>S.depts[i].unlocked&&(D.id.toLowerCase()===s||D.file.toLowerCase()===s||D.file.toLowerCase().split('.')[0]===s||D.name.toLowerCase()===s));}
+function runCmd(line){log('PS C:\\Users\\schueler\\firma> '+line,'tg');const a=line.trim().split(/\s+/),c=(a[0]||'').toLowerCase();if(!c)return;
+  if(blocked()&&!['help','clear','status','save'].includes(c)){log('Fehler: Krise aktiv – zuerst lösen!','err');return;}
+  const di=findDept(a[1]);
+  const need=()=>{if(di<0){log(`Abteilung „${a[1]||''}“ nicht gefunden. Verfügbar: ${S.depts.map((d,i)=>d.unlocked?DEPTS[i].id:null).filter(Boolean).join(', ')}`,'err');return false;}return true;};
+  switch(c){
+    case 'help':log('Befehle:\n  status                 Übersicht\n  commit                 alle Umsätze committen\n  overtime | npm run overtime\n  hire <abt> [n|max]     Leute einstellen\n  upgrade <abt>          Upgrade kaufen\n  automate <abt>         automatisieren\n  focus <abt>            Management-Fokus\n  speed <0|1|2|5>        Geschwindigkeit (0 = Pause)\n  save | clear | boss','info');break;
+    case 'status':log(`Cash ${money(S.cash)} · ${money(totalRate())}/Tag · ${qLabel()} Tag ${qDay()}/90 · Ziel ${money(S.q.target)} (${Math.floor(S.q.actual/S.q.target*100)} %) · ${S.re} RE`);
+      S.depts.forEach((d,i)=>{if(d.unlocked)log(`  ${DEPTS[i].file.padEnd(13)} staff ${String(d.staff).padStart(4)}  lvl ${d.lvl}  ${money(deptRate(i)).padStart(10)}/Tag ${d.auto?'auto':'uncommitted '+money(d.pending)}`);});break;
+    case 'commit':case 'git':if(!commitAll())log('Keine Änderungen zum Committen.','tg');break;
+    case 'overtime':case 'npm':overtime();break;
+    case 'hire':if(!need())break;{let n=a[2]==='max'?maxHire(di):parseInt(a[2]||'1',10)||1;n=Math.min(n,maxHire(di));const r=hire(di,n);if(r)log(`✓ ${n}× eingestellt in ${DEPTS[di].id} (${money(r)})`,'ok');else log('Nicht genug Cash.','err');}break;
+    case 'upgrade':if(!need())break;{const r=upgrade(di);r?log(`✓ ${DEPTS[di].id} → Lv${S.depts[di].lvl} (${money(r)})`,'ok'):log('Nicht genug Cash.','err');}break;
+    case 'automate':if(!need())break;{const r=automate(di);r?log(`✓ ${DEPTS[di].id} automatisiert (${money(r)})`,'ok'):log('Nicht möglich.','err');}break;
+    case 'focus':if(!need())break;focus(di);log(`⚡ Fokus auf ${DEPTS[di].id}: ×${(1+.25*S.depts[di].focus).toFixed(2)}`,'ok');break;
+    case 'speed':{const v=parseFloat(a[1]);if(v===0){S.paused=true;log('⏸ Pausiert');}else if([1,2,5].includes(v)){S.paused=false;S.speed=v;log('▶ '+v+'×');}else log('speed 0|1|2|5','err');}break;
+    case 'save':save(true);break;
+    case 'clear':case 'cls':$('#tlog').innerHTML='';break;
+    case 'boss':setBoss(true);break;
+    case 'ls':case 'dir':log('company.ts  finance.ts  team.yaml  settings.json  README.md  departments/');break;
+    default:log(`${a[0]}: Die Benennung „${a[0]}“ wurde nicht als Name eines Cmdlet, einer Funktion oder eines ausführbaren Programms erkannt. Tippe „help“.`,'err');}
+  render(true);}
+
+/* ================= VIEWS ================= */
+const FILES={company:{name:'company.ts',ext:'ts',icon:'TS',lang:'TypeScript'},finance:{name:'finance.ts',ext:'ts',icon:'TS',lang:'TypeScript'},team:{name:'team.yaml',ext:'yaml',icon:'!',lang:'YAML'},settings:{name:'settings.json',ext:'json',icon:'{}',lang:'JSON with Comments'},readme:{name:'README.md',ext:'md',icon:'ⓘ',lang:'Markdown'}};
+const ICON={md:'ⓘ',js:'JS',tsx:'⚛',py:'py',go:'go',rs:'rs',cpp:'C+',ts:'TS'};
+
+function linesHtml(L){let n=0;return L.map(l=>{
+  if(l.lens!==undefined)return `<div class="ln lens"><span class="g"></span><span class="c"><span class="ind">${' '.repeat(l.ind||0)}</span>${l.lens}</span></div>`;
+  n++;return `<div class="ln${l.cls?' '+l.cls:''}"${l.a?` data-a="${l.a}"`:''}${l.id?` id="${l.id}"`:''}><span class="g">${l.gut||''}${n}</span><span class="c">${l.c||''}</span></div>`;}).join('');}
+
+function viewCompany(){const L=[];
+  L.push({c:C('// company.ts — Firma GmbH · Hauptbuch')});
+  L.push({c:`${K2('import')} ${P('{')} ${T('Department')}, ${T('Ledger')} ${P('}')} ${K2('from')} ${S_('"./core"')};`});
+  L.push({c:`${K2('import')} ${F('dept')} ${K2('from')} ${S_('"./departments"')};`});
+  L.push({c:''});
+  L.push({c:`${K('export const')} ${V('ledger')}: ${T('Ledger')} = ${P('{')}`});
+  L.push({c:`  ${V('cash')}: ${Vv('cash','s')}, ${Vv('cashCm','cm')}`});
+  L.push({c:`  ${V('quarter')}: ${Vv('qStr','s')}, ${Vv('qCm','cm')}`});
+  L.push({c:P('};')});
+  L.push({c:''});
+  L.push({c:`${K('export const')} ${V('departments')} = ${P('{')}`});
+  DEPTS.forEach((D,i)=>{const d=S.depts[i];if(!d.unlocked)return;
+    const it=[A(`hire:${i}`,`d${i}.hireL`,`d${i}.hireE`),A(`hmax:${i}`,`d${i}.maxL`,`d${i}.maxE`),A(`up:${i}`,`d${i}.upL`,`d${i}.upE`)];
+    if(!d.auto&&!S.ext.hook){it.push(A(`auto:${i}`,`d${i}.autoL`,`d${i}.autoE`));it.push(A(`commit:${i}`,`d${i}.comL`,`d${i}.comE`));}
+    else if(!d.auto)it.push(A(`auto:${i}`,`d${i}.autoL`,`d${i}.autoE`));
+    else if(S.ipo)it.push(A(`star:${i}`,`d${i}.starL`,`d${i}.starE`));
+    L.push({lens:lens(it),ind:2});
+    const gold=R.golden&&R.golden.i===i;
+    L.push({id:'dl'+i,cls:gold?'golden':'',a:gold?`golden:${i}`:'',gut:gold?'<i class="bulb">💡</i>':'',
+      c:`  <span class="v ident" data-a="focus:${i}" title="Klicken = Management-Fokus (+25 %)">${D.id}</span>: ${F('dept')}${P('({')} ${V('staff')}: ${Vv(`d${i}.staff`)}, ${V('lvl')}: ${Vv(`d${i}.lvl`)}, ${V('perDay')}: ${Vv(`d${i}.perDay`,'s')}, ${d.auto||S.ext.hook?`${V('auto')}: ${K('true')}`:`${V('uncommitted')}: ${Vv(`d${i}.pend`,'s')}`} ${P('}),')} ${Vv(`d${i}.cm`,'cm')}`});});
+  const nl=S.depts.findIndex(d=>!d.unlocked);
+  if(nl>=0)L.push({c:`  ${C(`// TODO ${DEPTS[nl].id}: kommt ab ${money(DEPTS[nl].unlock)} Gesamtumsatz`)} ${Vv('nextCm','cm')}`});
+  L.push({c:P('};')});
+  L.push({c:''});
+  L.push({lens:lens([A('overtime','otL','otE'),A('commitall','caL','caE')]),ind:0});
+  L.push({c:`${K('export function')} ${F('crunch')}${P('():')} ${T('number')} ${P('{')} ${C('// Überstunden = 5 Tage Umsatz, wird pro Quartal weniger')}`});
+  L.push({c:`  ${K2('return')} ${F('sum')}${P('(')}${V('departments')}, ${P('(')}${V('d')}${P(')')} ${K('=>')} ${V('d')}.${V('perDay')} * ${N('5')}${P(')')};`});
+  L.push({c:P('}')});
+  if(R.golden)L.push({c:''}),L.push({c:C('// 💡 Ein Quick-Fix ist verfügbar – klicke auf die leuchtende Zeile!')});
+  return L;}
+
+function viewFinance(){const L=[],lk=guidanceLocked();
+  L.push({c:C('// finance.ts — Earnings, Steuern & Funding')});
+  L.push({c:`${K2('import')} ${P('{')} ${T('Quarter')}, ${T('TaxBill')} ${P('}')} ${K2('from')} ${S_('"./core"')};`});
+  L.push({c:''});
+  L.push({c:`${K('export const')} ${V('earnings')}: ${T('Quarter')} = ${P('{')}`});
+  L.push({c:`  ${V('quarter')}: ${Vv('fQ','s')}, ${Vv('fQcm','cm')}`});
+  L.push({lens:lk?`🔒 Guidance ist ab Tag 10 gesperrt`:lens(Object.keys(GUIDE).map(g=>`<a data-a="guid:${g}"${S.q.guidance===g?' class="sel"':''}>${GUIDE[g].de} (+${Math.round(GUIDE[g].g*100)} %, RE ×${GUIDE[g].re})</a>`)),ind:2});
+  L.push({c:`  ${V('guidance')}: ${S_(`"${S.q.guidance}"`)}, ${Vv('fGcm','cm')}`});
+  L.push({c:`  ${V('target')}: ${Vv('fT','s')},`});
+  L.push({c:`  ${V('actual')}: ${Vv('fA','s')}, ${Vv('fAcm','cm')}`});
+  L.push({c:`  ${V('streak')}: ${Vv('fS','s')}, ${Vv('fScm','cm')}`});
+  L.push({c:`  ${V('retainedEarnings')}: ${Vv('fRE')}, ${C('// RE → Erweiterungen-Marktplatz (Strg+Umschalt+X)')}`});
+  L.push({c:P('};')});
+  L.push({c:''});
+  L.push({c:`${K('export const')} ${V('taxes')} = ${P('{')}`});
+  L.push({c:`  ${V('rate')}: ${Vv('tRate')}, ${C('// Mindeststeuer 15 % vom Umsatz')}`});
+  L.push({c:`  ${V('nextBill')}: ${Vv('tNext','s')},`});
+  L.push({c:`  ${V('quarterRevenue')}: ${Vv('tQR','s')}, ${Vv('tEst','cm')}`});
+  L.push({c:`  ${V('depreciation')}: ${Vv('tDep','s')}, ${C('// Investitionen werden über 4 Quartale abgeschrieben')}`});
+  L.push({c:`  ${V('openBills')}: ${Vv('tOpen')}, ${C('// → PROBLEME-Panel')}`});
+  L.push({c:P('};')});
+  L.push({c:''});
+  L.push({c:`${K('export const')} ${V('funding')} = ${P('{')}`});
+  if(S.seriesA.offered&&!S.seriesA.done)L.push({lens:A('seriesa','saL',null),ind:2});
+  L.push({c:`  ${V('seriesA')}: ${K(S.seriesA.done?'true':'false')}, ${C(S.seriesA.done?'// ✓ abgeschlossen – C-Suite in team.yaml':S.seriesA.offered?'// Angebot liegt vor!':'// Angebot kommt ab $100K Gesamtumsatz')}`});
+  if(ipoReady())L.push({lens:A('ipo',null,null,'🔔 Börsengang starten (IPO)'),ind:2});
+  L.push({c:`  ${V('ipo')}: ${K(S.ipo?'true':'false')}, ${S.ipo?C('// ✓ börsennotiert'):Vv('ipoCm','cm')}`});
+  L.push({c:P('};')});
+  if(S.ipo){L.push({c:''});
+    L.push({c:`${K('export const')} ${V('stock')} = ${P('{')}`});
+    L.push({c:`  ${V('ticker')}: ${S_('"FIRMA"')},`});
+    L.push({c:`  ${V('price')}: ${Vv('sP')}, ${Vv('sPcm','cm')}`});
+    L.push({c:`  ${V('valuation')}: ${Vv('sV','s')}, ${C('// Cash + Jahresumsatz × Multiple')}`});
+    L.push({c:`  ${V('multiple')}: ${Vv('sM')},`});
+    L.push({c:`  ${V('chart')}: ${Vv('sC','s')},`});
+    L.push({c:P('};')});}
+  L.push({c:''});
+  L.push({c:`${K('export const')} ${V('history')}: ${T('Quarter')}${P('[]')} = ${P('[')}`});
+  S.history.slice(-8).forEach(h=>L.push({c:`  ${P('{')} ${V('q')}: ${S_(`"${h.q}"`)}, ${V('target')}: ${S_(`"${money(h.t)}"`)}, ${V('actual')}: ${S_(`"${money(h.a)}"`)}, ${V('beat')}: ${K(String(h.beat))}, ${V('re')}: ${N(h.re)} ${P('},')}`}));
+  if(!S.history.length)L.push({c:`  ${C('// noch keine abgeschlossenen Quartale')}`});
+  L.push({c:P('];')});
+  return L;}
+
+function viewTeam(){const L=[];
+  L.push({c:C('# team.yaml — C-Suite (Führungsebene automatisiert dein Unternehmen)')});
+  if(!S.seriesA.done){L.push({c:C('# 🔒 Gesperrt – wird nach der Series-A-Finanzierung freigeschaltet.')});L.push({c:C('#    (Angebot kommt ab $100K Gesamtumsatz, siehe finance.ts)')});return L;}
+  L.push({c:`${V('version')}: ${N('2')}`});L.push({c:''});
+  for(const r of ['cfo','cto','coo']){const s=SUITE[r],lv=S.suite[r];
+    L.push({lens:lv<3?A(`suite:${r}`,`su.${r}L`,`su.${r}E`):'✓ Maximales Level',ind:0});
+    L.push({c:`${V(r)}:  ${C(`# ${s.name} – ${s.desc}`)}`});
+    L.push({c:`  ${V('level')}: ${N(lv)}  ${C(lv?`# ${s.lv[lv-1]}`:'# nicht eingestellt')}`});
+    if(r!=='cfo')L.push({c:`  ${V('budget')}: <input type="range" min="0" max="100" step="5" data-r="${r}Pct" value="${S.suite[r+'Pct']}"> ${Vv(`su.${r}Pct`)}  ${C('# % vom freien Cash')}`});
+    L.push({c:''});}
+  L.push({c:`${V('reports')}:`});
+  L.push({c:`  ${V('upgradesByCTO')}: ${Vv('st.cto')}`});
+  L.push({c:`  ${V('hiresByCOO')}: ${Vv('st.coo')}`});
+  L.push({c:`  ${V('freeCash')}: ${Vv('st.free','s')}  ${C('# Cash minus offene/erwartete Steuern')}`});
+  return L;}
+
+function viewSettings(){const L=[],o=S.opts,tg=(k)=>`<span class="k tog" data-a="opt:${k}">${o[k]}</span>`;
+  L.push({c:P('{')});
+  L.push({lens:lens([`<a data-a="setth:dark"${o.theme==='dark'?' class="sel"':''}>Dark Modern</a>`,`<a data-a="setth:light"${o.theme==='light'?' class="sel"':''}>Light Modern</a>`]),ind:2});
+  L.push({c:`  ${S_('"workbench.colorTheme"')}: ${S_(o.theme==='dark'?'"Dark Modern"':'"Light Modern"')},`});
+  L.push({lens:lens([0,.5,1,2,5,10].map(f=>`<a data-a="freq:${f}"${o.eventFreq===f?' class="sel"':''}>${f}×</a>`)),ind:2});
+  L.push({c:`  ${S_('"game.eventFrequency"')}: ${N(o.eventFreq)}, ${C('// Zufallsereignisse & Krisen (0 = aus)')}`});
+  L.push({lens:lens([`<a data-a="spd:0"${S.paused?' class="sel"':''}>⏸ Pause</a>`].concat([1,2,5].map(v=>`<a data-a="spd:${v}"${!S.paused&&S.speed===v?' class="sel"':''}>${v}×</a>`))),ind:2});
+  L.push({c:`  ${S_('"game.speed"')}: ${N(S.paused?0:S.speed)}, ${C('// 1 Tag = 1 Sekunde bei 1×')}`});
+  L.push({c:`  ${S_('"game.pullRequests"')}: ${tg('deals')}, ${C('// klicken zum Umschalten')}`});
+  L.push({c:`  ${S_('"game.quickFixes"')}: ${tg('tasks')},`});
+  L.push({c:`  ${S_('"game.goldenLines"')}: ${tg('golden')},`});
+  L.push({c:`  ${S_('"game.crises"')}: ${tg('crises')},`});
+  L.push({c:`  ${S_('"game.effects"')}: ${tg('fx')}`});
+  L.push({lens:lens([`<a data-a="save">💾 Speichern</a>`,`<a data-a="export">Exportieren</a>`,`<a data-a="import">Importieren</a>`,`<a data-a="newgame">Neues Spiel</a>`]),ind:0});
+  L.push({c:P('}')});
+  return L;}
+
+function viewReadme(){const L=[],h=t=>({c:`<span class="md-h">${esc(t)}</span>`}),p=t=>({c:esc(t)}),b=(k,t)=>({c:`- <span class="md-b">${esc(k)}</span> ${esc(t)}`});
+  [h('# firma – Idle-Tycoon im Code-Editor'),p(''),p('Du startest mit einem kleinen Blog und baust ein Tech-Imperium auf.'),p('Für alle anderen sieht es so aus, als würdest du programmieren. 😎'),p(''),
+   h('## Steuerung'),b('Esc','Boss-Taste: wechselt sofort zu einer harmlosen Python-Hausübung'),b('Strg+S','Speichern (auch automatisch alle 15 s)'),b('Strg+Enter','Alle Umsätze committen'),b('Strg+Umschalt+P','Befehlspalette'),b('F11','Vollbild – dann sieht man den Browser nicht mehr'),p(''),
+   h('## So funktioniert es'),b('company.ts','Graue Links über den Abteilungen sind Aktionen: Einstellen, Upgrade (+50 %), Automatisieren'),b('Commit','Nicht automatisierte Abteilungen sammeln „uncommitted“ Umsatz – committen nicht vergessen!'),b('Fokus','Klick auf den Abteilungsnamen = +25 % (bis zu 8×, verfällt langsam)'),b('💡 Leuchtende Zeile','schnell anklicken für einen Bonus'),b('Pull Requests','Rechts unten mehrmals „Approve“ klicken = Enterprise-Vertrag'),b('Quick Fixes','Serien geben bis zu ×3'),b('Terminal','Tippe „help“ – du kannst alles auch per Befehl machen'),p(''),
+   h('## Earnings & Fortschritt'),b('finance.ts','Wähle jedes Quartal eine Guidance. Übertriffst du das Ziel, bekommst du Retained Earnings (RE).'),b('Erweiterungen','RE gibst du im Marketplace (linke Leiste) für dauerhafte Boni aus'),b('Steuern','Alle 90 Tage kommt ein Steuerbescheid – bezahle ihn rechtzeitig, sonst wird gepfändet'),b('Series A','ab $100K Gesamtumsatz → C-Suite in team.yaml (CFO/CTO/COO automatisieren alles)'),b('IPO','ab $25M Jahresumsatz → Aktienkurs, Restrukturierung (★ = ×10 pro Stufe), RE ×2'),p(''),
+   p('Viel Spaß – und lass dich nicht erwischen. 😉')].forEach(x=>L.push(x));
+  return L;}
+
+function hlPy(line){let out='',m;const re=/(#.*$)|(f?"(?:[^"\\]|\\.)*"|f?'(?:[^'\\]|\\.)*')|\b(\d+(?:\.\d+)?)\b|\b([A-Za-z_]\w*)\b|([^\w\s]+|\s+)/g;
+  const kw1=new Set(['def','class','None','True','False','and','or','not','is','lambda','self']),kw2=new Set(['return','if','elif','else','for','in','while','import','from','as','with','try','except','raise','pass','break','continue']),bi=new Set(['print','len','range','round','sum','max','min','sorted','all','any','mean','ValueError']);
+  let prev='';while((m=re.exec(line))){const [t,cm,str,num,id]=m;
+    if(cm)out+=C(cm);else if(str)out+=S_(str);else if(num)out+=N(num);
+    else if(id){if(kw2.has(id))out+=K2(id);else if(id==='self')out+=V(id);else if(kw1.has(id))out+=K(id);else if(prev==='def'||bi.has(id)||line.slice(m.index+id.length,m.index+id.length+1)==='(')out+=F(id);else if(prev==='class'||/^[A-Z]/.test(id))out+=T(id);else out+=V(id);prev=id;continue;}
+    else out+=esc(t);if(!/^\s+$/.test(t))prev=t;}
+  return out;}
+function viewBoss(){return BOSS_PY.split('\n').map(l=>({c:hlPy(l)}));}
+
+const VIEWS={company:viewCompany,finance:viewFinance,team:viewTeam,settings:viewSettings,readme:viewReadme};
+function editorKey(){if(R.boss)return 'boss';if(!R.tabs.length)return 'empty';const v=R.view;let k=v;
+  if(v==='company')k+=S.depts.map(d=>(d.unlocked?1:0)+''+(d.auto?1:0)).join('')+'|'+(R.golden?R.golden.i:'-')+S.ipo+!!S.ext.hook;
+  if(v==='finance')k+=[S.q.guidance,guidanceLocked(),S.seriesA.offered,S.seriesA.done,ipoReady(),S.ipo,S.history.length,S.q.n].join();
+  if(v==='team')k+=[S.seriesA.done,S.suite.cfo,S.suite.cto,S.suite.coo].join();
+  if(v==='settings')k+=JSON.stringify(S.opts)+S.speed+S.paused;
+  return k;}
+function buildEditor(){const ed=$('#editor');let L;
+  if(R.boss)L=viewBoss();else if(!R.tabs.length){ed.innerHTML=`<div class="empty"><div style="font-size:60px;opacity:.15">⌨</div><div>Befehlspalette anzeigen <kbd>Strg+Umschalt+P</kbd></div><div>Datei öffnen <kbd>Explorer</kbd></div></div>`;$('#minimap').innerHTML='';return;}
+  else L=VIEWS[R.view]();
+  const st=ed.scrollTop;ed.innerHTML=linesHtml(L);ed.scrollTop=st;
+  $('#minimap').innerHTML=L.filter(l=>l.lens===undefined).map(l=>{const t=(l.c||'').replace(/<[^>]+>/g,'').replace(/&[a-z]+;/g,'x');const ind=(t.match(/^ */)||[''])[0].length;return `<i style="width:${Math.min(56,t.trim().length*.6)}px;margin-left:${6+ind*1.2}px;${t.trim()?'':'opacity:0'}"></i>`;}).join('');}
+
+function sideKey(){if(R.boss)return 'boss';const s=R.side;let k=s;
+  if(s==='explorer')k+=R.view+S.depts.map(d=>d.unlocked?1:0).join('')+S.seriesA.done;
+  if(s==='scm')k+=S.depts.map(d=>(d.unlocked&&d.staff&&!d.auto&&!S.ext.hook)?1:0).join('');
+  if(s==='ext')k+=JSON.stringify(S.ext)+S.growth;
+  if(s==='run')k+=S.seriesA.done;
+  return k;}
+function buildSide(){const el=$('#side-game');const s=R.side;let h='';
+  document.querySelectorAll('#activity .ai').forEach(a=>a.classList.toggle('on',a.dataset.a==='side:'+s));
+  if(s==='explorer'){const fr=(id,ind)=>{const f=FILES[id];const lock=id==='team'&&!S.seriesA.done;return `<div class="row${R.view===id&&R.tabs.includes(id)?' act':''}${lock?' ign':''}" style="padding-left:${ind}px" data-a="open:${id}"><span class="fi ${f.ext}">${f.icon}</span>${f.name}${id==='finance'?'<span class="rr m" data-v="exM"></span>':''}</div>`;};
+    h=`<div class="sh">Explorer<span class="dots">···</span></div><div class="sbody"><div class="sect">▾ firma</div>
+      <div class="row" style="padding-left:12px"><span class="tw">▸</span>.vscode</div>
+      <div class="row" style="padding-left:12px" data-a="noop"><span class="tw">▾</span>departments</div>
+      ${DEPTS.map((D,i)=>{const d=S.depts[i];return `<div class="row${d.unlocked?'':' ign'}" style="padding-left:28px" data-a="goto:${i}" title="${d.unlocked?D.name:'Gesperrt bis '+money(D.unlock)+' Gesamtumsatz'}"><span class="fi ${D.ext}">${ICON[D.ext]}</span>${D.file}${d.unlocked?`<span class="rr" data-v="ex${i}"></span>`:''}</div>`;}).join('')}
+      <div class="row" style="padding-left:12px"><span class="tw">▾</span>src</div>
+      ${fr('company',28)}${fr('finance',28)}${fr('team',28)}
+      ${fr('settings',12)}${fr('readme',12)}
+      <div class="row" style="padding-left:12px"><span class="fi git">◆</span>.gitignore</div>
+      <div class="row" style="padding-left:12px"><span class="fi json">{}</span>package.json</div>
+      <div class="sect" style="margin-top:14px">▸ Gliederung</div><div class="sect">▸ Zeitachse</div></div>`;}
+  if(s==='search')h=`<div class="sh">Suchen<span class="dots">···</span></div><div class="search">Suchen</div><div class="search">Ersetzen</div><div style="padding:6px 20px;opacity:.7;font-size:12px">Es wurden keine Ergebnisse gefunden. Überprüfen Sie Ihre Einstellungen für konfigurierte Ausschlüsse.</div>`;
+  if(s==='scm'){const ch=S.depts.map((d,i)=>(d.unlocked&&d.staff&&!d.auto&&!S.ext.hook)?i:-1).filter(i=>i>=0);
+    h=`<div class="sh">Quellcodeverwaltung<span class="dots">✓ ↻ ···</span></div><div class="sbody"><div class="sect">▾ firma <span style="font-weight:400;opacity:.7">main</span></div>
+      <div class="scmbox"><textarea placeholder="Nachricht (Strg+Eingabe für Commit auf „main“)"></textarea><button class="bigbtn" data-a="commitall" data-en="caE"><span data-v="scmBtn"></span></button></div>
+      <div class="sect">▾ Änderungen <span class="cnt" data-v="scmBadge"></span></div>
+      ${ch.length?ch.map(i=>`<div class="row" style="padding-left:20px" data-a="commit:${i}" title="Klicken = committen"><span class="fi ${DEPTS[i].ext}">${ICON[DEPTS[i].ext]}</span>${DEPTS[i].file}<span style="opacity:.6;margin-left:6px;font-size:12px">departments</span><span class="rr m" data-v="scm${i}"></span></div>`).join(''):'<div style="padding:4px 20px;opacity:.7;font-size:12px">Alle Abteilungen sind automatisiert.</div>'}
+      <div class="sect" style="margin-top:12px">▸ Graph</div></div>`;}
+  if(s==='run'){const vr=(k,v)=>`<div class="row" style="padding-left:30px"><span class="vn">${k}</span>:<span class="vv" data-v="${v}"></span></div>`;
+    h=`<div class="sh">Ausführen und Debuggen<span class="dots">▷ ⚙ ···</span></div><div class="sbody vars">
+      <div class="sect">▾ Variablen</div><div class="row" style="padding-left:14px">▾ Lokal</div>
+      ${vr('hires','st.hires')}${vr('upgrades','st.upgrades')}${vr('automations','st.autos')}${vr('commits','st.commits')}${vr('overtime','st.ot')}${vr('quickFixes','st.tasks')}${vr('dealsClosed','st.deals')}${vr('goldenLines','st.golden')}${vr('events','st.events')}
+      <div class="row" style="padding-left:14px">▾ Earnings</div>${vr('beats','st.beats')}${vr('misses','st.misses')}${vr('reTotal','st.reT')}${vr('taxesPaid','st.tax')}
+      ${S.seriesA.done?`<div class="row" style="padding-left:14px">▾ C-Suite</div>${vr('ctoPurchases','st.cto')}${vr('cooHires','st.coo')}`:''}
+      <div class="row" style="padding-left:14px">▾ Global</div>${vr('totalRevenue','st.total')}${vr('playtime','st.time')}
+      <div class="sect" style="margin-top:10px">▾ Überwachen</div><div class="sect">▾ Aufrufliste</div>
+      <div class="row" style="padding-left:20px;opacity:.8">quarterClose <span style="margin-left:auto;opacity:.6">finance.ts</span></div><div class="row" style="padding-left:20px;opacity:.8">main <span style="margin-left:auto;opacity:.6">company.ts</span></div>
+      <div class="sect">▾ Haltepunkte</div></div>`;}
+  if(s==='ext'){const avail=EXT.filter(e=>(e.repeat||!S.ext[e.id])&&(!e.req||S.ext[e.req])),inst=EXT.filter(e=>S.ext[e.id]);
+    const card=(e,done)=>`<div class="extcard"><div class="exticon" style="background:${e.bg}">${e.icon}</div><div class="extinfo"><b>${e.name}${e.repeat?` <span style="font-weight:400;opacity:.7">(${S.growth}×)</span>`:''}</b><div class="ed">${e.desc}</div><div class="ep"><span class="pub">boardroom ✓</span>${done?'<button class="extbtn inst">Installiert</button>':`<button class="extbtn" data-a="ext:${e.id}" data-en="ext.${e.id}">Installieren · <span data-v="extc.${e.id}"></span> RE</button>`}</div></div></div>`;
+    h=`<div class="sh">Erweiterungen<span class="dots">⊽ ↻ ···</span></div><div class="search">Extensions im Marketplace suchen</div>
+      <div style="padding:0 20px 6px;font-size:12px;opacity:.85">Verfügbar: <b data-v="reAvail"></b> RE (Retained Earnings)</div><div class="sbody">
+      <div class="sect">▾ Empfohlen (${avail.length})</div>${avail.map(e=>card(e,false)).join('')||'<div style="padding:4px 20px;opacity:.7">Alles installiert!</div>'}
+      <div class="sect" style="margin-top:8px">▾ Installiert (${inst.length})</div>${inst.map(e=>card(e,true)).join('')}</div>`;}
+  el.innerHTML=h;}
+function buildSideBoss(){$('#side-boss').innerHTML=`<div class="sh">Explorer<span class="dots">···</span></div><div class="sbody"><div class="sect">▾ informatik</div>
+  <div class="row" style="padding-left:12px"><span class="tw">▸</span>__pycache__</div><div class="row" style="padding-left:12px"><span class="tw">▸</span>uebungen</div>
+  <div class="row act" style="padding-left:12px"><span class="fi py">py</span>hausuebung.py</div><div class="row" style="padding-left:12px"><span class="fi py">py</span>uebung_03.py</div>
+  <div class="row" style="padding-left:12px"><span class="fi txt">≡</span>notizen.txt</div><div class="row" style="padding-left:12px"><span class="fi md">ⓘ</span>README.md</div>
+  <div class="sect" style="margin-top:14px">▸ Gliederung</div><div class="sect">▸ Zeitachse</div></div>`;
+  $('#term-boss').innerHTML=`<div class="tl">PS C:\\Users\\schueler\\informatik&gt; python hausuebung.py</div><div class="tl">Anna          1.5  positiv</div><div class="tl">Ben            3.0  positiv</div><div class="tl">Clara         2.0  positiv</div><div class="tl">David         4.0  negativ</div><div class="tl">Bester Durchschnitt: Anna (1.5)</div><div class="prompt"><span>PS C:\\Users\\schueler\\informatik&gt; </span><input spellcheck="false"></div>`;}
+
+function buildTabs(){const t=$('#tabs');
+  if(R.boss){t.innerHTML=`<div class="tab on"><span class="fi py">py</span>hausuebung.py<span class="tx">✕</span></div><div class="tabfill"></div>`;
+    $('#crumbs').innerHTML='informatik › <span class="fi py" style="margin:0 2px 0 4px">py</span> hausuebung.py › ◇ Schueler';return;}
+  t.innerHTML=R.tabs.map(id=>{const f=FILES[id];return `<div class="tab${id===R.view?' on':''}" data-a="tab:${id}"><span class="fi ${f.ext}">${f.icon}</span>${f.name}<span class="tx" data-a="close:${id}">✕</span></div>`;}).join('')+'<div class="tabfill"></div>';
+  const f=FILES[R.view];$('#crumbs').innerHTML=R.tabs.length?`firma › ${R.view==='settings'||R.view==='readme'?'':'src › '}<span class="fi ${f.ext}" style="margin:0 2px 0 4px">${f.icon}</span> ${f.name} › ${({company:'⬡ departments',finance:'⬡ earnings',team:'⬡ cfo',settings:'{} workbench',readme:'# firma'})[R.view]}`:'';}
+
+function problemsKey(){return S.taxes.bills.map(b=>b.id+':'+(b.age>=15)+(b.age>=30)).join()+'|'+S.depts.map(d=>d.unlocked&&!d.auto&&!S.ext.hook&&d.staff&&d.pending>=deptRate(S.depts.indexOf(d),1)*119?1:0).join('')+(R.crisis?R.crisis.id:'');}
+function buildProblems(){const el=$('#p-prob');let h='';
+  if(R.crisis)h+=`<div class="prob"><span class="ic e">⊗</span>${R.crisis.title}: Abteilungen gestört <span class="pd">firma</span></div>`;
+  for(const b of S.taxes.bills)h+=`<div class="prob"><span class="ic ${b.age>=15?'e':'w'}">${b.age>=15?'⊗':'⚠'}</span>Steuerbescheid #${b.id}: <span data-v="bill${b.id}"></span> ${b.age>=30?'– Pfändung aktiv (−15 % Umsatz)':b.age>=15?'– 2. Mahnung':''} <span class="pd">finance.ts</span><button data-a="paybill:${b.id}" data-en="billE${b.id}">Bezahlen</button></div>`;
+  S.depts.forEach((d,i)=>{if(d.unlocked&&!d.auto&&!S.ext.hook&&d.staff&&d.pending>=deptRate(i,1)*119)h+=`<div class="prob"><span class="ic w">⚠</span>${DEPTS[i].file}: uncommitted Umsatz ist voll – committen! <span class="pd">company.ts</span><button data-a="commit:${i}">Commit</button></div>`;});
+  el.innerHTML=h||'<div class="tl tg" style="font-family:system-ui">Im Arbeitsbereich wurden bisher keine Probleme erkannt.</div>';}
+
+/* ================= VALUES ================= */
+function computeVals(){const v={},rate=totalRate();
+  v.cash=`"${money(S.cash)}"`;v.cashCm=`// +${money(rate)}/Tag · ${money(rate*365)}/Jahr${S.garnish?' · ⊗ Pfändung −15 %':''}${S.temp.length?' · Effekte ×'+S.temp.reduce((a,t)=>a*t.mult,1).toFixed(2):''}`;
+  v.qStr=`"${qLabel()} · Tag ${qDay()}/90"`;v.qCm=`// Ziel ${Math.min(999,Math.floor(S.q.actual/S.q.target*100))} % erreicht (finance.ts)`;
+  S.depts.forEach((d,i)=>{if(!d.unlocked)return;const r=deptRate(i),hc=hireCost(i),mx=maxHire(i),uc=upCost(i),ac=autoCost(i),k='d'+i;
+    v[k+'.staff']=String(d.staff);v[k+'.lvl']=String(d.lvl);v[k+'.perDay']=`"${money(r)}"`;v[k+'.pend']=`"${money(d.pending)}"`;
+    const full=!d.auto&&d.staff&&d.pending>=deptRate(i,1)*119;
+    v[k+'.cm']=['//',d.star?'★'.repeat(d.star):'',d.focus?`⚡${'█'.repeat(d.focus)}${'░'.repeat(8-d.focus)} ×${(1+.25*d.focus).toFixed(2)}`:'',d.bt>1?`🔬×${d.bt}`:'',full?'⚠ voll – committen!':'',d.auto?'auto':''].filter(Boolean).join(' ');if(v[k+'.cm']==='//')v[k+'.cm']='';
+    v[k+'.hireL']=`Einstellen ${money(hc)}`;v[k+'.hireE']=S.cash>=hc&&!blocked();
+    v[k+'.maxL']=`Max (${mx})`;v[k+'.maxE']=mx>0&&!blocked();
+    v[k+'.upL']=`Upgrade → Lv${d.lvl+1} ${money(uc)}`;v[k+'.upE']=S.cash>=uc&&d.staff>0&&!blocked();
+    v[k+'.autoL']=`Automatisieren ${money(ac)}`;v[k+'.autoE']=S.cash>=ac&&!blocked();
+    v[k+'.comL']=`✓ Commit ${money(d.pending)}`;v[k+'.comE']=d.pending>0.005&&!blocked();
+    v[k+'.starL']=`★ Restrukturieren ${money(starCost(i))} (×10)`;v[k+'.starE']=S.cash>=starCost(i)&&!blocked();
+    v['ex'+i]=d.auto||S.ext.hook?'':d.pending>0.005?'M':'';v['scm'+i]='+'+money(d.pending);});
+  const nl=S.depts.findIndex(d=>!d.unlocked);if(nl>=0)v.nextCm=`(${Math.floor(S.total/DEPTS[nl].unlock*100)} %)`;
+  const pend=S.depts.reduce((a,d)=>a+(d.auto?0:d.pending),0),pc=S.depts.filter(d=>!d.auto&&d.pending>0.005).length;
+  v.otL=`▶ npm run overtime (+${money(overtimeGain())})`;v.otE=!blocked();v.caL=`✓ Alles committen (+${money(pend)})`;v.caE=pend>0.005&&!blocked();
+  v.scmBadge=pc?String(pc):'';v.scmStar=pc?'*':'';v.scmBtn=`✓ Commit (+${money(pend)})`;
+  const affordable=EXT.filter(e=>(e.repeat||!S.ext[e.id])&&(!e.req||S.ext[e.req])&&S.re>=extCost(e)).length;v.extBadge=affordable?String(affordable):'';
+  v.reAvail=int(S.re);EXT.forEach(e=>{v['extc.'+e.id]=int(extCost(e));v['ext.'+e.id]=S.re>=extCost(e);});
+  // finance
+  const g=GUIDE[S.q.guidance],p=Math.max(0,S.streak)*.02*(S.ext.analyst?.5:1),pct=S.q.actual/S.q.target;
+  v.fQ=`"${qLabel()}"`;v.fQcm=`// Tag ${qDay()}/90 – Quartalsabschluss in ${90-qDay()+1} Tagen`;
+  v.fGcm=`// Ziel = Vorquartal ${money(S.q.base)} +${Math.round(g.g*100)} %${p?` +${Math.round(p*100)} % Analystendruck`:''}`;
+  v.fT=`"${money(S.q.target)}"`;v.fA=`"${money(S.q.actual)}"`;
+  const bl=Math.max(0,Math.min(10,Math.floor(pct*10)));v.fAcm=`// ${Math.floor(pct*100)} % ${'█'.repeat(bl)}${'░'.repeat(10-bl)} ${pct>=1?'✓ Ziel erreicht':'Prognose '+money(S.q.actual+rate*(90-qDay()))}`;
+  v.fS=`"${streakIcon()} ${Math.abs(S.streak)}"`;v.fScm=S.streak>0?`// ${S.streak} Beats in Folge · RE-Bonus ×${streakMult().toFixed(1)}`:S.streak<0?`// ${-S.streak} Misses in Folge`:'// noch keine Serie';
+  v.fRE=int(S.re);v.tRate=String(taxRate());const nd=(45-(S.day%90)+90)%90||90;v.tNext=`"in ${Math.ceil(nd)} Tagen"`;v.tQR=`"${money(S.taxes.quarterRev)}"`;
+  v.tEst=`// geschätzte Steuer ~${money(Math.max(taxRate()*(S.taxes.quarterRev-S.taxes.capex.slice(1).concat(S.taxes.curCapex).reduce((a,b)=>a+b,0)/4),.15*S.taxes.quarterRev))}`;
+  v.tDep=`"${money(S.taxes.lastDep)}"`;v.tOpen=String(S.taxes.bills.length);
+  v.saL=`💰 Series A annehmen (+${money(seriesAAmount())})`;
+  v.ipoCm=S.seriesA.done?`// ab $25M Jahresumsatz (aktuell ${money(annualRev())})`:'// zuerst Series A';
+  if(S.ipo){const pr=valuation()/1e8,prev=S.stock.length>1?S.stock[S.stock.length-2]:pr,ch=(pr-prev)/prev*100;
+    v.sP=pr.toFixed(2);v.sPcm=`// ${ch>=0?'▲':'▼'} ${Math.abs(ch).toFixed(2)} %`;v.sV=`"${money(valuation())}"`;v.sM=stockMultiple().toFixed(1);
+    const h=S.stock.slice(-30),mn=Math.min(...h),mx=Math.max(...h),bars='▁▂▃▄▅▆▇█';v.sC=`"${h.map(x=>bars[mx>mn?Math.round((x-mn)/(mx-mn)*7):3]).join('')}"`;
+    v.sbStock=`FIRMA ${pr.toFixed(2)} ${ch>=0?'▲':'▼'}`;}else v.sbStock='';
+  v.exM=S.taxes.bills.length?String(S.taxes.bills.length):'';
+  // team
+  for(const r of ['cfo','cto','coo']){const lv=S.suite[r];if(lv<3){const c=SUITE[r].cost[lv];v[`su.${r}L`]=`${lv?'Upgrade → Lv'+(lv+1):'Einstellen'} (${SUITE[r].lv[lv]}) ${money(c)}`;v[`su.${r}E`]=S.cash>=c;}v[`su.${r}Pct`]=(S.suite[r+'Pct']??0)+' %';}
+  const st=S.stats;Object.assign(v,{'st.hires':int(st.hires),'st.upgrades':int(st.upgrades),'st.autos':int(st.autos),'st.commits':int(st.commits),'st.ot':int(st.overtime),'st.tasks':int(st.tasks),'st.deals':int(st.deals),'st.golden':int(st.golden),'st.events':int(st.events),'st.beats':int(st.beats),'st.misses':int(st.misses),'st.reT':int(S.reTotal),'st.tax':`"${money(st.taxesPaid)}"`,'st.cto':int(st.ctoBuys),'st.coo':int(st.cooHires),'st.free':`"${money(freeCash())}"`,'st.total':`"${money(S.total)}"`,'st.time':`"${Math.floor(S.day)} Tage"`});
+  // problems & status
+  let e=0,w=0;for(const b of S.taxes.bills){b.age>=15?e++:w++;v['bill'+b.id]=money(b.amt);v['billE'+b.id]=S.cash>=b.amt;}
+  S.depts.forEach((d,i)=>{if(d.unlocked&&!d.auto&&!S.ext.hook&&d.staff&&d.pending>=deptRate(i,1)*119)w++;});if(R.crisis)e++;
+  v.errs=String(e);v.warns=String(w);v.probCount=e+w?String(e+w):'';
+  v.sbCash=`⟳ ${money(S.cash)}  (+${money(rate)}/Tag)`;v.sbQ=`${streakIcon()} ${qLabel()} · Tag ${qDay()} · ${Math.min(999,Math.floor(pct*100))} %`;v.sbRE=`🧩 ${int(S.re)} RE`;
+  v.sbSpeed=S.paused?'⏸ Pausiert':'▶ '+S.speed+'×';v.sbLang=R.boss?'Python':FILES[R.view]?FILES[R.view].lang:'Klartext';v.sbLn=String(R.boss?14:12);
+  if(R.crisis){const left=Math.max(0,R.crisis.until-S.day);v.crLeft=String(Math.ceil(left));v.crPct=String(Math.min(100,Math.floor((S.day-R.crisis.start)/R.crisis.dur*100)));v.crSpin=pick(['sill:resolveWithNewModule','reify:fsevents','timing idealTree','fetch: GET 200 https://registry.npmjs.org/left-pad']);}
+  return v;}
+let VN=[],EN=[];
+function rebind(){VN=[...document.querySelectorAll('[data-v]')];EN=[...document.querySelectorAll('[data-en]')];for(const n of VN)n._t=undefined;for(const n of EN)n._e=undefined;}
+function updateVals(){const v=computeVals();for(const el of VN){const t=v[el.dataset.v];if(t!==undefined&&el._t!==t){el._t=t;el.textContent=t;}}for(const el of EN){const b=!!v[el.dataset.en];if(el._e!==b){el._e=b;el.classList.toggle('dis',!b);}}}
+
+/* ================= RENDER ================= */
+const K_={};
+function render(force){let rb=false;
+  const ek=editorKey();if(force==='all'||ek!==K_.e){K_.e=ek;buildEditor();rb=true;}
+  const sk=sideKey();if(force==='all'||sk!==K_.s){K_.s=sk;if(!R.boss)buildSide();rb=true;}
+  const tk=(R.boss?'b':'')+R.tabs.join()+R.view;if(force==='all'||tk!==K_.t){K_.t=tk;buildTabs();}
+  const pk=problemsKey();if(force==='all'||pk!==K_.p){K_.p=pk;buildProblems();rb=true;}
+  if(rb||force==='all')rebind();
+  updateVals();}
+function openTab(id){if(!R.tabs.includes(id))R.tabs.push(id);R.view=id;render();}
+function closeTab(id){R.tabs=R.tabs.filter(t=>t!==id);if(R.view===id)R.view=R.tabs[R.tabs.length-1]||'company';render();}
+function setPanel(p){R.panel=p;document.querySelectorAll('#ptabs .pt').forEach(t=>t.classList.toggle('on',t.dataset.a==='panel:'+p));
+  for(const id of ['prob','out','debug','term'])$('#p-'+id).style.display=id===p?'':'none';$('#panel').classList.remove('hidden');if(p==='term'){const pb=$('#pbody');pb.scrollTop=pb.scrollHeight;}}
+function setSide(s){if(R.side===s&&!$('#sidebar').classList.contains('hidden')){$('#sidebar').classList.add('hidden');document.querySelectorAll('#activity .ai').forEach(a=>a.classList.remove('on'));return;}
+  R.side=s;$('#sidebar').classList.remove('hidden');render();K_.s=null;render();}
+function setBoss(on){R.boss=on;document.body.classList.toggle('boss',on);document.title=on?'hausuebung.py — informatik':(FILES[R.view]?FILES[R.view].name:'firma')+' — firma';if(on){buildSideBoss();closePalette();}render('all');if(!on)log('Willkommen zurück.','tg');}
+function setTheme(t){S.opts.theme=t;document.body.classList.toggle('light',t==='light');}
+
+/* ================= INPUT ================= */
+function act(a,el){const [c,arg]=a.split(':'),i=parseInt(arg,10);
+  const needOk=['hire','hmax','up','auto','commit','star','overtime','commitall','golden','focus','paybill'];
+  if(needOk.includes(c)&&blocked()){toast('⊗','Erst die Krise lösen!');return;}
+  if(el&&el.classList&&el.classList.contains('dis'))return;
+  let r;
+  switch(c){
+    case 'hire':r=hire(i,1);if(r)float('−'+money(r),'#f48771');break;
+    case 'hmax':{const n=maxHire(i);r=hire(i,n);if(r)float(`+${n} 👤`,'#9cdcfe');}break;
+    case 'up':r=upgrade(i);if(r)float('Lv'+S.depts[i].lvl+' ⬆','#9cdcfe');break;
+    case 'auto':r=automate(i);if(r){float('⚙ automatisiert','#9cdcfe');log(`⚙ ${DEPTS[i].id} läuft jetzt automatisch`,'ok');}break;
+    case 'star':r=restructure(i);if(r){float('★ ×10','#e5c07b');log(`★ ${DEPTS[i].id} restrukturiert (★${S.depts[i].star})`,'gold');}break;
+    case 'commit':r=commit(i);if(r)float('+'+money(r));break;
+    case 'commitall':commitAll();break;
+    case 'overtime':overtime();break;
+    case 'focus':focus(i);break;
+    case 'golden':collectGolden(i);break;
+    case 'open':openTab(arg);if(arg==='team'&&!S.seriesA.done)toast('🔒','team.yaml wird nach der Series-A-Finanzierung freigeschaltet.');break;
+    case 'goto':if(!S.depts[i].unlocked){toast('🔒',`${DEPTS[i].file} wird bei ${money(DEPTS[i].unlock)} Gesamtumsatz freigeschaltet.`);break;}openTab('company');setTimeout(()=>{const l=$('#dl'+i);if(l){l.scrollIntoView({block:'center'});l.classList.remove('flash');void l.offsetWidth;l.classList.add('flash');}},30);break;
+    case 'tab':R.view=arg;break;
+    case 'close':closeTab(arg);break;
+    case 'side':setSide(arg);break;
+    case 'panel':setPanel(arg);break;
+    case 'guid':setGuidance(arg);break;
+    case 'seriesa':acceptSeriesA();break;
+    case 'ipo':doIPO();break;
+    case 'suite':hireSuite(arg);break;
+    case 'ext':buyExt(arg);break;
+    case 'paybill':payBill(i);break;
+    case 'opt':S.opts[arg]=!S.opts[arg];break;
+    case 'setth':setTheme(arg);break;
+    case 'theme':setTheme(S.opts.theme==='dark'?'light':'dark');break;
+    case 'freq':S.opts.eventFreq=parseFloat(arg);break;
+    case 'spd':{const v=parseFloat(arg);if(v===0)S.paused=true;else{S.paused=false;S.speed=v;}}break;
+    case 'speed':if(S.paused){S.paused=false;S.speed=1;}else if(S.speed===1)S.speed=2;else if(S.speed===2)S.speed=5;else S.paused=true;break;
+    case 'pause':S.paused=!S.paused;break;
+    case 'save':save(true);break;
+    case 'export':exportSave();break;
+    case 'import':$('#fileIn').click();break;
+    case 'newgame':notify({icon:'⚠',title:'Neues Spiel?',msg:'Der aktuelle Spielstand wird gelöscht.',buttons:[{label:'Ja, neu starten',pri:1,fn:()=>{localStorage.removeItem(SAVE_KEY);S=newState();resetRuntime();render('all');log('Neues Spiel gestartet.','info');}},{label:'Abbrechen'}]});break;
+    case 'boss':setBoss(!R.boss);break;
+    case 'palette':openPalette();break;
+    case 'togglesidebar':$('#sidebar').classList.toggle('hidden');break;
+    case 'togglepanel':$('#panel').classList.toggle('hidden');break;
+    case 'fixcrisis':fixCrisis();break;
+    case 'fixmerge':endCrisis(true);float('✓ Konflikt gelöst','#89d185');break;
+  }
+  render(true);}
+function resetRuntime(){Object.assign(R,{golden:null,nextGolden:40,nextDeal:90,nextTask:30,crisis:null,ctoT:0,cooT:0,noise:0});$('#crisis').className='';$('#crisis').innerHTML='';for(const n of [...R.notifs])closeNotif(n);$('#tlog').innerHTML='';setTheme(S.opts.theme);}
+document.addEventListener('mousemove',e=>{R.mx=e.clientX;R.my=e.clientY;},{passive:true});
+document.addEventListener('click',e=>{
+  const m=e.target.closest('#menus>div');document.querySelectorAll('#menus>div').forEach(d=>{if(d!==m)d.classList.remove('open');});
+  if(m&&!e.target.closest('.dd')){m.classList.toggle('open');return;}
+  if(m)m.classList.remove('open');
+  if(!e.target.closest('#palette')&&!e.target.closest('[data-a="palette"]'))closePalette();
+  const el=e.target.closest('[data-a]');if(!el)return;
+  if(R.boss&&!['boss','palette','togglesidebar','togglepanel'].includes(el.dataset.a)&&!el.dataset.a.startsWith('side')&&!el.dataset.a.startsWith('panel'))return;
+  act(el.dataset.a,el);});
+document.addEventListener('input',e=>{const r=e.target.dataset&&e.target.dataset.r;if(!r)return;const val=+e.target.value,other=r==='ctoPct'?'cooPct':'ctoPct';S.suite[r]=val;if(val+S.suite[other]>100){S.suite[other]=100-val;const o=document.querySelector(`[data-r="${other}"]`);if(o)o.value=S.suite[other];}updateVals();});
+$('#tin').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value;e.target.value='';R.hist=R.hist||[];if(v.trim())R.hist.push(v);R.hi=R.hist.length;runCmd(v);}
+  else if(e.key==='ArrowUp'&&R.hist&&R.hi>0){e.target.value=R.hist[--R.hi];e.preventDefault();}else if(e.key==='ArrowDown'&&R.hist){R.hi=Math.min(R.hist.length,R.hi+1);e.target.value=R.hist[R.hi]||'';}});
+$('#pbody').addEventListener('click',e=>{if(R.panel==='term'&&!R.boss&&!window.getSelection().toString()&&!e.target.closest('button'))$('#tin').focus();});
+document.addEventListener('keydown',e=>{const k=e.key,ctrl=e.ctrlKey||e.metaKey;
+  if(k==='Escape'){e.preventDefault();if($('#palette').style.display==='block'){closePalette();return;}document.querySelectorAll('#menus>div').forEach(d=>d.classList.remove('open'));setBoss(!R.boss);return;}
+  if(ctrl&&k.toLowerCase()==='s'){e.preventDefault();save(true);return;}
+  if((ctrl&&e.shiftKey&&k.toLowerCase()==='p')||k==='F1'){e.preventDefault();openPalette();return;}
+  if(R.boss)return;
+  if(ctrl&&k==='Enter'){e.preventDefault();if(!blocked())commitAll();render(true);return;}
+  if(ctrl&&k.toLowerCase()==='b'){e.preventDefault();$('#sidebar').classList.toggle('hidden');return;}
+  if(ctrl&&k.toLowerCase()==='j'){e.preventDefault();$('#panel').classList.toggle('hidden');return;}
+  if(ctrl&&e.shiftKey&&k.toLowerCase()==='x'){e.preventDefault();setSide('ext');return;}
+  if(ctrl&&e.shiftKey&&k.toLowerCase()==='g'){e.preventDefault();setSide('scm');return;}
+  if(ctrl&&(k==='ö'||k==='`')){e.preventDefault();setPanel('term');$('#tin').focus();return;}});
+window.addEventListener('beforeunload',()=>save(false));
+
+/* palette */
+function commands(){const c=[
+  ['Datei: Speichern',()=>save(true),'Strg+S'],['Datei: Spielstand exportieren',exportSave],['Datei: Spielstand importieren',()=>$('#fileIn').click()],['Datei: Neues Spiel',()=>act('newgame')],
+  ['Git: Alles committen',()=>{if(!blocked())commitAll();},'Strg+Enter'],['Tasks: npm run overtime',()=>{if(!blocked())overtime();}],
+  ['Spiel: Pause / Weiter',()=>S.paused=!S.paused],['Spiel: Geschwindigkeit 1×',()=>{S.paused=false;S.speed=1;}],['Spiel: Geschwindigkeit 2×',()=>{S.paused=false;S.speed=2;}],['Spiel: Geschwindigkeit 5×',()=>{S.paused=false;S.speed=5;}],
+  ['Ansicht: Boss-Modus (Hausübung)',()=>setBoss(true),'Esc'],['Einstellungen: Farbdesign wechseln',()=>act('theme')],['Ansicht: Erweiterungen anzeigen',()=>setSide('ext'),'Strg+Umschalt+X'],['Ansicht: Quellcodeverwaltung',()=>setSide('scm'),'Strg+Umschalt+G'],
+  ['Hilfe: Spielanleitung (README)',()=>openTab('readme')],['Gehe zu: finance.ts',()=>openTab('finance')],['Gehe zu: team.yaml',()=>openTab('team')],['Gehe zu: settings.json',()=>openTab('settings')]];
+  S.depts.forEach((d,i)=>{if(d.unlocked){c.push([`Abteilung: ${DEPTS[i].id} einstellen (max)`,()=>act('hmax:'+i)]);c.push([`Abteilung: ${DEPTS[i].id} upgraden`,()=>act('up:'+i)]);}});
+  return c;}
+let PI=0,PL=[];
+function openPalette(){const p=$('#palette');p.style.display='block';const i=$('#pin');i.value=R.boss?'':'>';i.focus();filterPalette();}
+function closePalette(){$('#palette').style.display='none';}
+function filterPalette(){const q=$('#pin').value.replace(/^>/,'').trim().toLowerCase();
+  PL=R.boss?[['Python: Datei im Terminal ausführen',()=>{}],['Python: Interpreter auswählen',()=>{}],['Ansicht: Zurück zum Spiel',()=>setBoss(false),'Esc']]:commands();
+  PL=PL.filter(c=>c[0].toLowerCase().includes(q));PI=0;drawPalette();}
+function drawPalette(){$('#plist').innerHTML=PL.map((c,i)=>`<div class="${i===PI?'on':''}" data-pi="${i}"><span>${esc(c[0])}</span>${c[2]?`<kbd>${c[2]}</kbd>`:''}</div>`).join('')||'<div>Keine übereinstimmenden Befehle</div>';}
+$('#pin').addEventListener('input',filterPalette);
+$('#pin').addEventListener('keydown',e=>{if(e.key==='ArrowDown'){PI=Math.min(PL.length-1,PI+1);drawPalette();e.preventDefault();}else if(e.key==='ArrowUp'){PI=Math.max(0,PI-1);drawPalette();e.preventDefault();}else if(e.key==='Enter'){const c=PL[PI];closePalette();if(c){c[1]();render(true);}}});
+$('#plist').addEventListener('click',e=>{const d=e.target.closest('[data-pi]');if(!d)return;const c=PL[+d.dataset.pi];closePalette();c[1]();render(true);});
+
+/* export / import */
+function exportSave(){const data=JSON.stringify(S),blob=new Blob([JSON.stringify({game:'firma',v:1,sum:hash(data),data:S},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`firma-spielstand-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);log('Spielstand exportiert.','info');}
+$('#fileIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const o=JSON.parse(rd.result);if(!o.data||o.game!=='firma')throw new Error('Keine firma-Spielstanddatei');
+  const ok=hash(JSON.stringify(o.data))===o.sum;const apply=()=>{S=migrate(o.data);resetRuntime();save(false);render('all');log('Spielstand importiert.','ok');};
+  notify({icon:ok?'📂':'⚠',title:ok?'Spielstand importieren?':'Prüfsumme stimmt nicht!',msg:`Cash ${money(o.data.cash)}, ${qLabel(o.data.q.n)}, ${o.data.re} RE. ${ok?'':'Die Datei wurde verändert.'} Aktueller Stand wird überschrieben.`,buttons:[{label:'Laden',pri:1,fn:apply},{label:'Abbrechen'}]});}
+  catch(err){toast('⊗','Import fehlgeschlagen: '+esc(err.message));}};rd.readAsText(f);e.target.value='';});
+
+/* ================= START ================= */
+function mainLoop(){const now=performance.now();let rdt=(now-R.last)/1000;R.last=now;rdt=Math.min(rdt,60);
+  if(!S.paused){let dt=rdt*S.speed;while(dt>0){const c=Math.min(dt,.5);tick(c);dt-=c;}if(!R.boss)tickNotifs(rdt);}
+  R.ui+=rdt;if(R.ui>=.2){R.ui=0;render();}
+  R.saveT+=rdt;if(R.saveT>=15){R.saveT=0;save(false);}}
+(function init(){const had=load();setTheme(S.opts.theme);
+  if(had){const secs=Math.min((Date.now()-S.lastSave)/1000,8*3600);R.gm=globalMult(true);let auto=0;S.depts.forEach((d,i)=>{if(d.auto||S.ext.hook)auto+=deptRate(i,R.gm);});
+    const off=auto*secs*.5;if(off>1&&secs>30){gain(off);setTimeout(()=>toast('👋',`Willkommen zurück! Deine automatisierten Abteilungen haben offline <b>${money(off)}</b> verdient.`),400);}}
+  else{computeTarget();}
+  log('firma v1.0 – Idle-Tycoon. Tippe „help“ für Befehle. Esc = Boss-Taste.','info');
+  if(!had)setTimeout(()=>notify({icon:'👋',title:'Willkommen!',time:30,msg:'Klicke auf die grauen Links über <b>blog</b>, um Leute einzustellen. Committe deinen Umsatz regelmäßig. <b>Esc</b> = Boss-Taste.',buttons:[{label:'Anleitung öffnen',pri:1,fn:()=>openTab('readme')},{label:'Los geht’s'}]}),300);
+  setPanel('term');render('all');setInterval(mainLoop,100);})();
+</script>
+</body>
+</html>
